@@ -1,8 +1,34 @@
 // Client API tipizzato per il backend NestJS di Aura.
 // Salva access+refresh in memoria + localStorage (per dev). In produzione:
 // httpOnly cookie settati dal backend (vedi auth.controller - da migrare).
+//
+// Gestione backend non disponibile (PRD cloud-recovery):
+//   - Quando il backend non è raggiungibile, le API lanciano BackendUnavailableError
+//     invece di un errore generico. Le pagine possono distinguere questo caso
+//     e mostrare uno stato realistico di "servizio non disponibile" SENZA
+//     simulare operazioni riuscite (nessun dato fittizio spacciato per reale,
+//     nessuna azione eseguita come se fosse andata a buon fine).
+//   - Esiste una modalità "demo" esplicita (login.demo) che permette di
+//     navigare il pannello con un utente fittizio SOLO client-side, per
+//     ispezionare le schermate quando il backend è offline. In questa
+//     modalità tutti i bottoni di azione sono disabilitati e ogni operazione
+//     mostra "Servizio backend non disponibile".
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Flag demo: se true, l'utente ha scelto di navigare senza backend.
+// Settato SOLO dal pulsante esplicito in /login, mai automaticamente.
+let demoMode = false;
+export function isDemoMode() { return demoMode; }
+export function setDemoMode(v: boolean) { demoMode = v; }
+
+// Errore tipizzato per "backend non raggiungibile" (vs errore HTTP dal backend).
+export class BackendUnavailableError extends Error {
+  constructor(message = 'Servizio backend non disponibile. Riprova più tardi.') {
+    super(message);
+    this.name = 'BackendUnavailableError';
+  }
+}
 
 let accessToken: string | null = null;
 const REFRESH_KEY = 'aura_refresh_token';
@@ -34,6 +60,7 @@ async function refreshAccessToken(): Promise<boolean> {
     setTokens(data.accessToken, data.refreshToken);
     return true;
   } catch {
+    // Errore di rete = backend non raggiungibile
     return false;
   }
 }
@@ -43,13 +70,30 @@ export async function api<T = any>(
   opts: RequestInit = {},
   retry = true,
 ): Promise<T> {
+  // In modalità demo non chiamiamo mai il backend: restituiamo sempre
+  // BackendUnavailableError. Le pagine lo gestiscono mostrando uno stato
+  // realistico di servizio non disponibile (nessun dato fittizio come se
+  // fosse reale).
+  if (demoMode) {
+    throw new BackendUnavailableError();
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(opts.headers as Record<string, string> | undefined),
   };
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
-  const r = await fetch(`${API}${path}`, { ...opts, headers });
+  let r: Response;
+  try {
+    r = await fetch(`${API}${path}`, { ...opts, headers });
+  } catch (e: any) {
+    // fetch throw = errore di rete (DNS, connessione rifiutata, CORS, timeout).
+    // Distinto da un errore HTTP (il backend ha risposto con 4xx/5xx).
+    throw new BackendUnavailableError(
+      'Il servizio backend non è raggiungibile. Verifica la connessione o riprova più tardi.'
+    );
+  }
 
   if (r.status === 401 && retry && accessToken) {
     // Try refresh once

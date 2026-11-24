@@ -13,7 +13,7 @@ const NAV = [
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, isDemo } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [perms, setPerms] = useState<Set<string>>(new Set());
@@ -69,6 +69,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <div className="text-xs text-aura-mute">Connesso come</div>
             <div className="text-sm text-aura-text truncate">{user.displayName}</div>
             <div className="text-[11px] text-aura-dim truncate">{user.email}</div>
+            {isDemo && (
+              <div className="mt-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">
+                modalità demo
+              </div>
+            )}
           </div>
           <button onClick={() => logout().then(() => router.push('/login'))} className="btn-ghost w-full text-xs">
             Esci
@@ -76,6 +81,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <main className="flex-1 overflow-auto">
+        {isDemo && (
+          <div className="bg-yellow-500/15 border-b border-yellow-500/30 text-yellow-200 text-sm px-6 py-2.5">
+            ⚠️ <strong>Modalità dimostrativa</strong> — il backend non è disponibile. Le pagine mostrano
+            stati realistici di servizio non disponibile; nessuna operazione viene eseguita né simulata come riuscita.
+            Tutti i dati sono fittizi a scopo di navigazione.
+          </div>
+        )}
         <div className="max-w-7xl mx-auto p-6 lg:p-8">{children}</div>
       </main>
     </div>

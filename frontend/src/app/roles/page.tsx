@@ -1,23 +1,34 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Shell from '@/components/Shell';
-import { apiRolesList, apiRoleCreate, apiRoleDelete, apiPermissionsList } from '@/lib/api';
+import ServiceUnavailable from '@/components/ServiceUnavailable';
+import { apiRolesList, apiRoleCreate, apiRoleDelete, apiPermissionsList, BackendUnavailableError, isDemoMode } from '@/lib/api';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<any[]>([]);
   const [perms, setPerms] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = () => {
+    setError('');
+    setUnavailable(false);
     Promise.all([apiRolesList(), apiPermissionsList()])
       .then(([r, p]) => { setRoles(r as any[]); setPerms(p as any[]); })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (e instanceof BackendUnavailableError) setUnavailable(true);
+        else setError(e.message);
+      });
   };
   useEffect(() => { load(); }, []);
 
   const del = async (id: string, name: string) => {
     if (!confirm(`Cancellare il ruolo "${name}"?`)) return;
+    if (isDemoMode() || unavailable) {
+      alert('Servizio backend non disponibile. L\'operazione non può essere eseguita.');
+      return;
+    }
     try { await apiRoleDelete(id); load(); } catch (e: any) { alert(e.message); }
   };
 
@@ -28,48 +39,53 @@ export default function RolesPage() {
           <h1 className="text-2xl font-bold text-aura-text">Ruoli & permessi</h1>
           <p className="text-aura-mute text-sm mt-1">Matrice RBAC. Il ruolo <code className="text-aura-gold">super_admin</code> è protetto e non modificabile.</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">+ Nuovo ruolo</button>
+        <button onClick={() => setShowCreate(true)} disabled={unavailable || isDemoMode()} className="btn-primary" title={unavailable || isDemoMode() ? 'Servizio backend non disponibile' : ''}>+ Nuovo ruolo</button>
       </div>
 
       {error && <div className="card bg-red-500/10 border-red-500/40 text-red-300 mb-4">{error}</div>}
+      {unavailable && <div className="mb-4"><ServiceUnavailable context="caricare i ruoli e i permessi" /></div>}
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {roles.map((r: any) => (
-          <div key={r.id} className="card">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="font-bold text-aura-text flex items-center gap-2">
-                  {r.name}
-                  {r.isProtected && <span className="badge bg-aura-gold/20 text-aura-gold">🔒 protetto</span>}
-                </h3>
-                <p className="text-xs text-aura-dim mt-0.5">{r.scope}</p>
+      {!unavailable && (
+        <>
+          <div className="grid md:grid-cols-2 gap-4">
+            {roles.map((r: any) => (
+              <div key={r.id} className="card">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-bold text-aura-text flex items-center gap-2">
+                      {r.name}
+                      {r.isProtected && <span className="badge bg-aura-gold/20 text-aura-gold">🔒 protetto</span>}
+                    </h3>
+                    <p className="text-xs text-aura-dim mt-0.5">{r.scope}</p>
+                  </div>
+                  {!r.isProtected && (
+                    <button onClick={() => del(r.id, r.name)} className="btn-danger px-2 py-1 text-xs">Elimina</button>
+                  )}
+                </div>
+                {r.description && <p className="text-sm text-aura-mute mb-3">{r.description}</p>}
+                <div className="text-xs text-aura-dim">
+                  <span className="text-aura-violet">{r._count?.permissions || 0}</span> permessi ·{' '}
+                  <span className="text-aura-teal">{r._count?.userRoles || 0}</span> utenti assegnati
+                </div>
               </div>
-              {!r.isProtected && (
-                <button onClick={() => del(r.id, r.name)} className="btn-danger px-2 py-1 text-xs">Elimina</button>
-              )}
-            </div>
-            {r.description && <p className="text-sm text-aura-mute mb-3">{r.description}</p>}
-            <div className="text-xs text-aura-dim">
-              <span className="text-aura-violet">{r._count?.permissions || 0}</span> permessi ·{' '}
-              <span className="text-aura-teal">{r._count?.userRoles || 0}</span> utenti assegnati
+            ))}
+          </div>
+
+          <div className="card mt-6">
+            <h3 className="text-sm font-semibold text-aura-mute uppercase tracking-wider mb-3">Permessi disponibili ({perms.length})</h3>
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {perms.map((p: any) => (
+                <div key={p.id} className="text-xs">
+                  <code className="text-aura-violet">{p.permissionKey}</code>
+                  <div className="text-aura-dim mt-0.5">{p.description}</div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="card mt-6">
-        <h3 className="text-sm font-semibold text-aura-mute uppercase tracking-wider mb-3">Permessi disponibili ({perms.length})</h3>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
-          {perms.map((p: any) => (
-            <div key={p.id} className="text-xs">
-              <code className="text-aura-violet">{p.permissionKey}</code>
-              <div className="text-aura-dim mt-0.5">{p.description}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {showCreate && <CreateModal perms={perms} onClose={() => setShowCreate(false)} onDone={() => { setShowCreate(false); load(); }} />}
+          {showCreate && <CreateModal perms={perms} onClose={() => setShowCreate(false)} onDone={() => { setShowCreate(false); load(); }} />}
+        </>
+      )}
     </Shell>
   );
 }

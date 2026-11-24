@@ -1,18 +1,24 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Shell from '@/components/Shell';
-import { apiAuditList } from '@/lib/api';
+import ServiceUnavailable from '@/components/ServiceUnavailable';
+import { apiAuditList, BackendUnavailableError } from '@/lib/api';
 
 export default function AuditPage() {
   const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState('');
   const [error, setError] = useState('');
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = () => {
     setError('');
+    setUnavailable(false);
     apiAuditList({ limit: 100, action: filter || undefined })
       .then(setData)
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (e instanceof BackendUnavailableError) setUnavailable(true);
+        else setError(e.message);
+      });
   };
   useEffect(() => { load(); }, [filter]);
 
@@ -36,34 +42,37 @@ export default function AuditPage() {
       </div>
 
       {error && <div className="card bg-red-500/10 border-red-500/40 text-red-300 mb-4">{error}</div>}
+      {unavailable && <div className="mb-4"><ServiceUnavailable context="caricare l'audit log" /></div>}
 
-      <div className="card overflow-x-auto">
-        <table className="table-aura">
-          <thead>
-            <tr>
-              <th>Quando</th><th>Attore</th><th>Azione</th><th>Risorsa</th><th>Risultato</th><th>IP</th><th>Motivo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!data && <tr><td colSpan={7} className="text-aura-dim">Caricamento…</td></tr>}
-            {data?.items?.map((a: any) => (
-              <tr key={a.id}>
-                <td className="text-aura-dim text-xs whitespace-nowrap">{new Date(a.createdAt).toLocaleString('it-IT')}</td>
-                <td className="text-aura-mute">{a.actorId?.slice(0, 8) || 'system'}</td>
-                <td><code className="text-aura-violet text-xs">{a.action}</code></td>
-                <td className="text-aura-mute text-xs">{a.resourceType}:{a.resourceId?.slice(0, 8) || '—'}</td>
-                <td>
-                  <span className={`badge ${a.result === 'success' ? 'badge-active' : a.result === 'denied' ? 'badge-suspended' : 'badge-pending'}`}>
-                    {a.result}
-                  </span>
-                </td>
-                <td className="text-aura-dim text-xs font-mono">{a.ip || '—'}</td>
-                <td className="text-aura-mute text-xs max-w-xs truncate">{a.reason || '—'}</td>
+      {!unavailable && (
+        <div className="card overflow-x-auto">
+          <table className="table-aura">
+            <thead>
+              <tr>
+                <th>Quando</th><th>Attore</th><th>Azione</th><th>Risorsa</th><th>Risultato</th><th>IP</th><th>Motivo</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {!data && <tr><td colSpan={7} className="text-aura-dim">Caricamento…</td></tr>}
+              {data?.items?.map((a: any) => (
+                <tr key={a.id}>
+                  <td className="text-aura-dim text-xs whitespace-nowrap">{new Date(a.createdAt).toLocaleString('it-IT')}</td>
+                  <td className="text-aura-mute">{a.actorId?.slice(0, 8) || 'system'}</td>
+                  <td><code className="text-aura-violet text-xs">{a.action}</code></td>
+                  <td className="text-aura-mute text-xs">{a.resourceType}:{a.resourceId?.slice(0, 8) || '—'}</td>
+                  <td>
+                    <span className={`badge ${a.result === 'success' ? 'badge-active' : a.result === 'denied' ? 'badge-suspended' : 'badge-pending'}`}>
+                      {a.result}
+                    </span>
+                  </td>
+                  <td className="text-aura-dim text-xs font-mono">{a.ip || '—'}</td>
+                  <td className="text-aura-mute text-xs max-w-xs truncate">{a.reason || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Shell>
   );
 }

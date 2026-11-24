@@ -3,9 +3,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { BackendUnavailableError } from '@/lib/api';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginDemo } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,10 +21,23 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Login fallito.');
+      // Distingui "backend non disponibile" da "credenziali errate":
+      // - BackendUnavailableError → messaggio specifico + suggerimento modalità demo
+      // - altri errori (HTTP 401 dal backend) → "credenziali non valide"
+      if (err instanceof BackendUnavailableError) {
+        setError(err.message + ' Puoi comunque esplorare il pannello in modalità demo qui sotto.');
+      } else {
+        setError(err.message || 'Login fallito.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const enterDemo = () => {
+    setError('');
+    loginDemo();
+    router.push('/');
   };
 
   return (
@@ -68,6 +82,19 @@ export default function LoginPage() {
             {loading ? 'Accesso…' : 'Accedi'}
           </button>
         </form>
+
+        {/* Modalità demo: permette di navigare il pannello quando il backend
+            non è disponibile. Dati fittizi, azioni disabilitate, banner esplicito. */}
+        <div className="card mt-4 text-center">
+          <p className="text-xs text-aura-mute mb-3">
+            Il backend non è ancora pubblicato? Puoi esplorare il pannello in
+            <span className="text-aura-gold font-medium"> modalità dimostrativa</span>:
+            i dati sono fittizi, nessuna operazione viene eseguita.
+          </p>
+          <button onClick={enterDemo} className="btn-ghost w-full text-xs">
+            Esplora in modalità demo →
+          </button>
+        </div>
 
         <p className="text-center text-aura-dim text-xs mt-6">
           ⚠️ Accesso riservato al Super Admin e collaboratori autorizzati.

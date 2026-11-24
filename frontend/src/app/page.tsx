@@ -2,17 +2,25 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Shell from '@/components/Shell';
-import { apiDashboard, apiRecentActivity } from '@/lib/api';
+import ServiceUnavailable from '@/components/ServiceUnavailable';
+import { apiDashboard, apiRecentActivity, BackendUnavailableError } from '@/lib/api';
 
 export default function HomePage() {
   const [data, setData] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
   const [error, setError] = useState('');
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     Promise.all([apiDashboard(), apiRecentActivity()])
       .then(([d, a]) => { setData(d); setActivity(a as any[]); })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (e instanceof BackendUnavailableError) {
+          setUnavailable(true);
+        } else {
+          setError(e.message);
+        }
+      });
   }, []);
 
   return (
@@ -23,8 +31,9 @@ export default function HomePage() {
       </div>
 
       {error && <div className="card bg-red-500/10 border-red-500/40 text-red-300">{error}</div>}
+      {unavailable && <ServiceUnavailable context="caricare la dashboard e l'attività recente" />}
 
-      {!data && !error && <div className="text-aura-mute">Caricamento…</div>}
+      {!data && !error && !unavailable && <div className="text-aura-mute">Caricamento…</div>}
 
       {data && (
         <>

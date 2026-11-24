@@ -1,29 +1,44 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Shell from '@/components/Shell';
-import { apiStaffList, apiStaffInvite, apiStaffRevoke, apiStaffRequireMfa, apiRolesList } from '@/lib/api';
+import ServiceUnavailable from '@/components/ServiceUnavailable';
+import { apiStaffList, apiStaffInvite, apiStaffRevoke, apiStaffRequireMfa, apiRolesList, BackendUnavailableError, isDemoMode } from '@/lib/api';
 
 export default function StaffPage() {
   const [list, setList] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [showInvite, setShowInvite] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = () => {
+    setError('');
+    setUnavailable(false);
     Promise.all([apiStaffList(), apiRolesList()])
       .then(([s, r]) => { setList(s as any[]); setRoles((r as any[]).filter((x) => x.name !== 'super_admin')); })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        if (e instanceof BackendUnavailableError) setUnavailable(true);
+        else setError(e.message);
+      });
   };
 
   useEffect(() => { load(); }, []);
 
   const revoke = async (userId: string) => {
+    if (isDemoMode() || unavailable) {
+      alert('Servizio backend non disponibile. L\'operazione non può essere eseguita.');
+      return;
+    }
     const reason = prompt('Motivo revoca (PRD §4.6)?') || '';
     if (!confirm('Revocare definitivamente l\'accesso di questo collaboratore?')) return;
     try { await apiStaffRevoke(userId, reason); load(); } catch (e: any) { alert(e.message); }
   };
 
   const toggleMfa = async (userId: string, current: boolean) => {
+    if (isDemoMode() || unavailable) {
+      alert('Servizio backend non disponibile. L\'operazione non può essere eseguita.');
+      return;
+    }
     try { await apiStaffRequireMfa(userId, !current); load(); } catch (e: any) { alert(e.message); }
   };
 
@@ -34,40 +49,43 @@ export default function StaffPage() {
           <h1 className="text-2xl font-bold text-aura-text">Collaboratori</h1>
           <p className="text-aura-mute text-sm mt-1">Staff amministrativo con ruoli e permessi assegnati dal Super Admin.</p>
         </div>
-        <button onClick={() => setShowInvite(true)} className="btn-primary">+ Invita collaboratore</button>
+        <button onClick={() => setShowInvite(true)} disabled={unavailable || isDemoMode()} className="btn-primary" title={unavailable || isDemoMode() ? 'Servizio backend non disponibile' : ''}>+ Invita collaboratore</button>
       </div>
 
       {error && <div className="card bg-red-500/10 border-red-500/40 text-red-300 mb-4">{error}</div>}
+      {unavailable && <div className="mb-4"><ServiceUnavailable context="caricare l'elenco dei collaboratori" /></div>}
 
-      <div className="card overflow-x-auto">
-        <table className="table-aura">
-          <thead>
-            <tr><th>Nome</th><th>Email</th><th>Stato</th><th>MFA obbligatoria</th><th>Ruoli</th><th>Ultimo accesso</th><th className="text-right">Azioni</th></tr>
-          </thead>
-          <tbody>
-            {list.length === 0 && <tr><td colSpan={7} className="text-aura-dim">Nessun collaboratore.</td></tr>}
-            {list.map((s: any) => (
-              <tr key={s.id}>
-                <td className="font-medium">{s.user?.displayName}</td>
-                <td className="text-aura-mute">{s.user?.email}</td>
-                <td><span className={`badge-${s.status === 'active' ? 'active' : 'suspended'}`}>{s.status}</span></td>
-                <td>
-                  <button onClick={() => toggleMfa(s.userId, s.mfaRequired)} className="text-xs">
-                    {s.mfaRequired ? '✅ on' : '❌ off'}
-                  </button>
-                </td>
-                <td className="text-aura-mute text-xs">—</td>
-                <td className="text-aura-dim text-xs">{s.user?.lastLoginAt ? new Date(s.user.lastLoginAt).toLocaleString('it-IT') : 'mai'}</td>
-                <td>
-                  <div className="flex justify-end">
-                    <button onClick={() => revoke(s.userId)} className="btn-danger px-2 py-1 text-xs">Revoca accesso</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {!unavailable && (
+        <div className="card overflow-x-auto">
+          <table className="table-aura">
+            <thead>
+              <tr><th>Nome</th><th>Email</th><th>Stato</th><th>MFA obbligatoria</th><th>Ruoli</th><th>Ultimo accesso</th><th className="text-right">Azioni</th></tr>
+            </thead>
+            <tbody>
+              {list.length === 0 && <tr><td colSpan={7} className="text-aura-dim">Nessun collaboratore.</td></tr>}
+              {list.map((s: any) => (
+                <tr key={s.id}>
+                  <td className="font-medium">{s.user?.displayName}</td>
+                  <td className="text-aura-mute">{s.user?.email}</td>
+                  <td><span className={`badge-${s.status === 'active' ? 'active' : 'suspended'}`}>{s.status}</span></td>
+                  <td>
+                    <button onClick={() => toggleMfa(s.userId, s.mfaRequired)} className="text-xs">
+                      {s.mfaRequired ? '✅ on' : '❌ off'}
+                    </button>
+                  </td>
+                  <td className="text-aura-mute text-xs">—</td>
+                  <td className="text-aura-dim text-xs">{s.user?.lastLoginAt ? new Date(s.user.lastLoginAt).toLocaleString('it-IT') : 'mai'}</td>
+                  <td>
+                    <div className="flex justify-end">
+                      <button onClick={() => revoke(s.userId)} className="btn-danger px-2 py-1 text-xs">Revoca accesso</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {showInvite && <InviteModal roles={roles} onClose={() => setShowInvite(false)} onDone={() => { setShowInvite(false); load(); }} />}
     </Shell>
