@@ -1,0 +1,21 @@
+# Render config per il backend NestJS di Aura (alternativa a Fly.io).
+# Free tier: 1 Web Service gratis, spin-down dopo 15 min inattività.
+# NO Cloudflare: Render usa la sua CDN, non Cloudflare.
+
+services:
+  - type: web
+    name: aura-backend
+    runtime: docker
+    plan: free
+    region: ohio  # vicino a Neon (AWS us-east-2)
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: false  # NO auto-deploy: richiede PR review prima di pushare in produzione
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      # Le seguenti vanno impostate nel dashboard Render (NO in chat, NO in file):
+      # DATABASE_URL, DIRECT_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
+      # AURA_SUPERADMIN_EMAIL, AURA_SUPERADMIN_PASSWORD, CORS_ORIGIN

@@ -47,3 +47,6 @@ screenshots/
 # Vecchia app statica upload
 upload/
 
+
+# Local Netlify folder
+.netlify

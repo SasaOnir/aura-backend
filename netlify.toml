@@ -20,6 +20,8 @@
   base = "frontend/"
   command = "npm run build"
   # Next.js con App Router: la directory di output è .next
+  # NOTA: con base = "frontend/", il publish è relativo alla stessa base,
+  # quindi ".next" = frontend/.next (NON <root>/.next)
   publish = ".next"
 
 # ─── Variabili d'ambiente di build (non-secret) ─────────────────────────
@@ -29,6 +31,13 @@
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "true"
   NODE_VERSION = "20"
+
+# ─── Plugin Next.js (necessario per App Router + output: standalone) ───
+# Dichiarato esplicitamente per determinismo (Netlify lo installerebbe
+# comunque via auto-detection, ma così il build è riproducibile anche
+# fuori da Netlify CI).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 # ─── Deploy di produzione (branch main) ────────────────────────────────
 # Protetto: nessun deploy automatico in produzione senza autorizzazione.

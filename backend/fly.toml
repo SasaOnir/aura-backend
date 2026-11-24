@@ -1,0 +1,37 @@
+# Fly.io config per il backend NestJS di Aura.
+# Free tier: 3 shared-cpu-1x VM con 256MB RAM (sufficiente per NestJS + Prisma).
+# NO Cloudflare: Fly.io usa la sua edge network, non Cloudflare.
+
+app = "aura-backend"
+primary_region = "iad"  # US East — vicino a Neon (AWS us-east-2 Ohio)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0  # free tier: spin-down quando non serve
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "30s"
+    method = "get"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+# Secrets da impostare con `flyctl secrets set` (NO in chat, NO in file):
+#   DATABASE_URL=<pooled Neon connection string (-pooler)>
+#   DIRECT_URL=<direct Neon connection string>
+#   JWT_ACCESS_SECRET=<64+ byte random>
+#   JWT_REFRESH_SECRET=<64+ byte random>
+#   AURA_SUPERADMIN_EMAIL=<email>
+#   AURA_SUPERADMIN_PASSWORD=<12+ char>
+#   CORS_ORIGIN=<URL frontend Netlify>
