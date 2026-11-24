@@ -62,10 +62,24 @@ export class AdminController {
   @Get('recent-activity')
   @RequirePermissions('analytics.global')
   async recentActivity() {
-    return this.prisma.auditLog.findMany({
+    // AuditLog non ha una relazione tipata `actor` nello schema Prisma
+    // (l'actor è referenziato tramite `actorId` ma senza `@relation`).
+    // Recuperiamo i log, poi gli actor in un'unica query, e assembliamo il join.
+    const logs = await this.prisma.auditLog.findMany({
       take: 20,
       orderBy: { createdAt: 'desc' },
-      include: { actor: { select: { email: true, displayName: true } } },
     });
+    const actorIds = [...new Set(logs.map((l) => l.actorId).filter(Boolean))] as string[];
+    const actors = actorIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, email: true, displayName: true },
+        })
+      : [];
+    const actorMap = new Map(actors.map((a) => [a.id, a]));
+    return logs.map((l) => ({
+      ...l,
+      actor: l.actorId ? actorMap.get(l.actorId) ?? null : null,
+    }));
   }
 }

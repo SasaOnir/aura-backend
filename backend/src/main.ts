@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as helmet from 'helmet';
-import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
 
@@ -13,7 +13,7 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   // Sicurezza (PRD §15)
-  app.use(helmet.default());
+  app.use(helmet());
   app.use(cookieParser());
 
   // CORS restrictivo (PRD §15)

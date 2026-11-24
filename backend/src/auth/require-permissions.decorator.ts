@@ -16,9 +16,9 @@ export const RequirePermissions = (
   mode: PERMISSIONS_MODE = 'all',
 ): MethodDecorator => {
   const permsArr = Array.isArray(perms) ? perms : [perms];
-  return (target: any, propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
-    SetMetadata(PERMISSIONS_KEY, permsArr)(target, propertyKey, descriptor);
-    SetMetadata(PERMISSIONS_MODE_KEY, mode)(target, propertyKey, descriptor);
+  return (target: any, propertyKey: string | symbol | undefined, descriptor: PropertyDescriptor | undefined) => {
+    SetMetadata(PERMISSIONS_KEY, permsArr)(target, propertyKey!, descriptor!);
+    SetMetadata(PERMISSIONS_MODE_KEY, mode)(target, propertyKey!, descriptor!);
   };
 };
 

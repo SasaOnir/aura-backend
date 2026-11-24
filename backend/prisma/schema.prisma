@@ -1,19 +1,20 @@
-# Prisma schema per Aura — backend NestJS
-# Reflects db/schema.sql (manteniamo il DDL SQL come sorgente di verità per
-# vincoli CHECK complessi e immutabilità audit_logs; Prisma viene usato
-# come client tipato per l'ORM lato applicazione).
-#
-# NOTA: le migrazioni Prisma NON vengono usate in produzione; lo schema
-# viene applicato via db/schema.sql nel init-script di Postgres. Prisma
-# `migrate dev` è solo per dev locale senza Docker.
+/// Prisma schema per Aura — backend NestJS
+/// Reflects db/schema.sql (manteniamo il DDL SQL come sorgente di verità per
+/// vincoli CHECK complessi e immutabilità audit_logs; Prisma viene usato
+/// come client tipato per l'ORM lato applicazione).
+///
+/// NOTA: le migrazioni Prisma NON vengono usate in produzione; lo schema
+/// viene applicato via db/schema.sql nel init-script di Postgres. Prisma
+/// `migrate dev` è solo per dev locale senza Docker.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── 7.1 Identità e organizzazioni ────────────────────────────────────

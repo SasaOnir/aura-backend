@@ -9,10 +9,10 @@ import { IsString, IsIn, IsOptional, IsArray, MinLength } from 'class-validator'
 
 class CreateRoleDto {
   @IsString() @MinLength(2)
-  name: string;
+  name!: string;
   @IsString() @IsOptional() description?: string;
   @IsIn(['system', 'organization', 'artist'])
-  scope: 'system' | 'organization' | 'artist';
+  scope!: 'system' | 'organization' | 'artist';
   @IsArray() @IsString({ each: true }) @IsOptional()
   permissionKeys?: string[];
 }

@@ -1,0 +1,74 @@
+# Aura — Configurazione Netlify (frontend Next.js)
+#
+# Architettura:
+#   - Frontend Next.js 14 (App Router, output: standalone) → deployato su Netlify
+#   - Backend NestJS (long-lived process, JWT, audit, bootstrap super-admin)
+#     → NON deployato su Netlify Functions; resta su container (Fly.io / Railway /
+#     Render / VPS) come documentato in docs/ARCHITETTURA_CLOUD.md
+#   - Database: Neon PostgreSQL (branch production)
+#   - Storage audio: S3-compatible esterno (vedi docs/STORAGE_MUSICALE.md)
+#
+# Documentazione ufficiale Next.js su Netlify:
+#   https://docs.netlify.com/integrations/frameworks/next-js/overview/
+#
+# Il plugin @netlify/plugin-nextjs viene rilevato e installato automaticamente
+# da Netlify alla prima build di un progetto Next.js; non è necessario
+# dichiararlo esplicitamente qui.
+
+[build]
+  # Monorepo: il frontend vive in frontend/
+  base = "frontend/"
+  command = "npm run build"
+  # Next.js con App Router: la directory di output è .next
+  publish = ".next"
+
+# ─── Variabili d'ambiente di build (non-secret) ─────────────────────────
+# I valori sensibili (API URL di produzione, token) vanno configurati nel
+# dashboard Netlify (Site settings → Environment variables), NON in questo
+# file versionato.
+[build.environment]
+  NEXT_TELEMETRY_DISABLED = "true"
+  NODE_VERSION = "20"
+
+# ─── Deploy di produzione (branch main) ────────────────────────────────
+# Protetto: nessun deploy automatico in produzione senza autorizzazione.
+# Per attivare la protezione, in dashboard: Site settings → Build & deploy →
+#   Deploy protections → "Require approval for production deploys" = ON
+[context.production]
+  command = "npm run build"
+  publish = ".next"
+  # NODE_ENV è già "production" di default sui deploy di produzione.
+
+# ─── Deploy preview (branch di sviluppo e PR) ──────────────────────────
+# Attivo di default su Netlify per ogni branch non-main e per ogni Pull Request.
+[context.deploy-preview]
+  command = "npm run build"
+  publish = ".next"
+
+# ─── Redirect API → backend separato ───────────────────────────────────
+# Il frontend chiama /api/* ; in produzione lo si proxia al backend NestJS
+# ospitato altrove (Fly.io / Railway / VPS). Il valore di BACKEND_URL va
+# impostato come env var nel dashboard Netlify (sito di produzione) e nel
+# sito di preview. Qui dichiariamo solo la regola di routing.
+[[redirects]]
+  from = "/api/*"
+  to = "${BACKEND_URL}/:splat"
+  status = 200
+  force = true
+  # Importante: proxy (status 200), non redirect 301.
+  # Il frontend di Aura invia il JWT come header `Authorization: Bearer <token>`
+  # (vedi frontend/src/lib/api.ts), NON via cookie httpOnly. Il proxy 200
+  # inoltra tutti gli header della richiesta al backend, quindi il token
+  # arriva intatto. Inoltre mantiene la chiamata same-origin dal punto di
+  # vista del browser, evitando preflight CORS per le richieste autenticate.
+  # Il backend deve comunque avere CORS_ORIGIN impostato all'URL del frontend
+  # Netlify per le rotte che il browser chiama direttamente (se mai attivate).
+
+# ─── Headers di sicurezza (PRD §15) ────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"

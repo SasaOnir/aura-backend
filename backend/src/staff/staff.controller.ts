@@ -9,14 +9,14 @@ import { StaffService } from './staff.service';
 import { IsEmail, IsString, IsArray, IsBoolean, IsOptional, MinLength } from 'class-validator';
 
 class InviteDto {
-  @IsEmail() email: string;
-  @IsString() @MinLength(2) displayName: string;
-  @IsArray() @IsString({ each: true }) roleNames: string[];
+  @IsEmail() email!: string;
+  @IsString() @MinLength(2) displayName!: string;
+  @IsArray() @IsString({ each: true }) roleNames!: string[];
   @IsBoolean() @IsOptional() sendInviteEmail?: boolean;
 }
 
 class AssignRoleDto {
-  @IsString() roleName: string;
+  @IsString() roleName!: string;
   @IsString() @IsOptional() reason?: string;
 }
 
@@ -25,7 +25,7 @@ class ReasonDto {
 }
 
 class RequireMfaDto {
-  @IsBoolean() required: boolean;
+  @IsBoolean() required!: boolean;
 }
 
 @Controller('staff')

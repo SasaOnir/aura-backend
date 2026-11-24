@@ -1,11 +1,36 @@
 import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { hash, verify, needRehash } from '@node-rs/argon2';
+import { hash, verify } from '@node-rs/argon2';
 import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from './permissions.service';
 import { RegisterDto, LoginDto } from './dto';
+
+/**
+ * Verifica se un hash argon2 esistente è stato generato con parametri diversi
+ * da quelli attualmente in uso (e va quindi re-hashato).
+ * @node-rs/argon2 non espone più `needRehash`; reimplementiamo il controllo
+ * parsando il formato standard `$argon2id$v=19$m=<mem>,t=<time>,p=<par>$...`.
+ */
+function needRehash(
+  hashStr: string,
+  expected: { memoryCost: number; timeCost: number; parallelism: number },
+): boolean {
+  if (!hashStr || !hashStr.startsWith('$argon2')) return true;
+  // formato: $argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>
+  const parts = hashStr.split('$');
+  // parts[0] = "", parts[1] = "argon2id", parts[2] = "v=19", parts[3] = "m=19456,t=2,p=1"
+  const params = parts[3] || '';
+  const m = params.match(/m=(\d+),t=(\d+),p=(\d+)/);
+  if (!m) return true;
+  const [, mem, time, par] = m;
+  return (
+    Number(mem) !== expected.memoryCost ||
+    Number(time) !== expected.timeCost ||
+    Number(par) !== expected.parallelism
+  );
+}
 
 export interface JwtPayload {
   sub: string;   // user id
@@ -85,7 +110,7 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Credenziali non valide.');
 
     // Re-hash se i parametri di argon2 sono cambiati (PRD §15)
-    if (needRehash(user.passwordHash, { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 })) {
+    if (needRehash(user.passwordHash, { memoryCost: 19456, timeCost: 2, parallelism: 1 })) {
       const newHash = await hash(dto.password, { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 });
       await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
     }
