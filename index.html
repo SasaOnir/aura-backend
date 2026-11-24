@@ -928,25 +928,40 @@ async function doLogin(){
   go("home");
 }
 
-/* ── Recupero password (locale, no server email) ── */
+/* ── Recupero password con OTP via email (Cloudflare Worker + Resend) ── */
+// ⚙️ INSERISCI QUI L'URL del tuo Worker dopo il deploy (vedi worker/README-worker.md).
+// Lascia "" per usare la modalità demo locale (codice finto 123456) — utile in dev senza Worker.
+const AURA_MAIL_URL = "";
+
 function renderRecover(){
   document.getElementById("root").innerHTML = `
   <div class="auth-wrap">
     <div class="auth-card">
       <div class="brand" onclick="go('landing')" style="cursor:pointer"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">RECUPERO PASSWORD</div></div></div>
       <h1>Password dimenticata?</h1>
-      <div class="sub">Nessun problema. Inserisci la tua email e una nuova password.</div>
-      <div class="hint-banner" style="margin-bottom:14px"><b>Architettura locale.</b> I dati restano nel tuo browser (localStorage). Le password sono hashate SHA-256+salt: <b>irreversibili</b>. Per questo reimpostiamo la password anziché recuperarla — nessun server email è coinvolto, niente lascia il tuo dispositivo.</div>
-      <div class="field" id="f-email"><label>Email dell'account</label><input type="email" id="rec-email" placeholder="tu@esempio.com"><div class="error">Email non trovata. Controlla o <a href="#" onclick="go('register');return false">registrati</a>.</div></div>
-      <div class="field" id="f-pw"><label>Nuova password</label><input type="password" id="rec-pw" placeholder="Min. 8 caratteri"><div class="pw-strength"><div class="bar" id="rec-pw-bar"></div></div><div class="error">Minimo 8 caratteri.</div><div class="hint">Sarà hashata con SHA-256 + nuovo salt. La vecchia password viene sostituita.</div></div>
-      <div class="field" id="f-pw2"><label>Ripeti nuova password</label><input type="password" id="rec-pw2" placeholder="Uguale a sopra"><div class="error">Le password non coincidono.</div></div>
-      <button class="btn btn-primary" id="rec-submit" style="width:100%;margin-top:8px">Reimposta password</button>
+      <div class="sub">Riceverai un codice a 6 cifre via email per reimpostare la password.</div>
+      <div class="hint-banner" style="margin-bottom:14px"><b>Sicurezza.</b> Le password sono hashate SHA-256+salt (irreversibili), per questo si reimpostano anziché recuperarle. Il codice OTP è validato dal server e scade in 10 minuti.</div>
+      ${AURA_MAIL_URL? '' : '<div class="hint-banner" style="margin-bottom:14px;background:rgba(255,209,102,.10);border-color:rgba(255,209,102,.4)"><b>Modalità demo locale.</b> Worker non configurato (AURA_MAIL_URL vuoto). Il codice <b>123456</b> funziona comunque per test. Per email reali: deploya il Worker (vedi <code>worker/README-worker.md</code>).</div>'}
+
+      <div class="field" id="f-email"><label>Email dell'account</label><input type="email" id="rec-email" placeholder="tu@esempio.com"><div class="error">Email non valida. Controlla o <a href="#" onclick="go('register');return false">registrati</a>.</div></div>
+
+      <div id="rec-step-otp" style="display:none">
+        <div class="field" id="f-code"><label>Codice ricevuto via email</label><input type="text" id="rec-code" placeholder="6 cifre" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" style="letter-spacing:6px;font-size:20px;font-family:monospace;text-align:center"><div class="error">Codice non valido (6 cifre).</div><div class="hint">Controlla la casella email. Scade in 10 minuti.</div></div>
+        <div class="field" id="f-pw"><label>Nuova password</label><input type="password" id="rec-pw" placeholder="Min. 8 caratteri"><div class="pw-strength"><div class="bar" id="rec-pw-bar"></div></div><div class="error">Minimo 8 caratteri.</div><div class="hint">Hashata con SHA-256 + nuovo salt.</div></div>
+        <div class="field" id="f-pw2"><label>Ripeti nuova password</label><input type="password" id="rec-pw2" placeholder="Uguale a sopra"><div class="error">Le password non coincidono.</div></div>
+      </div>
+
+      <button class="btn btn-primary" id="rec-submit" style="width:100%;margin-top:8px">Invia codice</button>
+      <button class="btn btn-ghost" id="rec-resend" style="width:100%;margin-top:8px;display:none">↻ Invia di nuovo il codice</button>
       <p style="text-align:center;color:var(--text-mute);font-size:13px;margin:16px 0 0"><a href="#" onclick="go('login');return false">← Torna al login</a></p>
     </div>
   </div>`;
   document.getElementById("rec-pw").addEventListener("input", updateRecPwStrength);
   document.getElementById("rec-submit").onclick = doRecover;
+  document.getElementById("rec-resend").onclick = doRecoverSendCode;
+  document.getElementById("rec-code").addEventListener("keydown", e=>{ if(e.key==="Enter") doRecover(); });
   document.getElementById("rec-pw2").addEventListener("keydown", e=>{ if(e.key==="Enter") doRecover(); });
+  window._recStage = "send"; // "send" → "verify"
 }
 function updateRecPwStrength(){
   const pw=document.getElementById("rec-pw").value; const bar=document.getElementById("rec-pw-bar");
@@ -954,22 +969,81 @@ function updateRecPwStrength(){
   const pct=[0,20,40,60,80,100][s]; const col=[["#ff5d8f"],["#ff5d8f"],["#ffd166"],["#ffd166"],["#7afcd6"],["#7afcd6"]][s];
   bar.style.width=pct+"%"; bar.style.background=col;
 }
-async function doRecover(){
+
+// Step 1: invia codice OTP via Worker
+async function doRecoverSendCode(){
   const email=document.getElementById("rec-email").value.trim().toLowerCase();
+  const emailOk=validEmail(email);
+  document.getElementById("f-email").classList.toggle("invalid", !emailOk);
+  if(!emailOk) return;
+
+  const btn=document.getElementById("rec-submit"); btn.disabled=true; btn.textContent="Invio in corso…";
+  try {
+    if (AURA_MAIL_URL) {
+      const resp = await fetch(AURA_MAIL_URL + "/request-otp", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await resp.json();
+      if (!data.ok) { toast("❌ " + (data.error||"Errore invio codice")); btn.disabled=false; btn.textContent="Invia codice"; return; }
+      toast("✅ Codice inviato via email");
+    } else {
+      // Modalità demo: codice finto 123456 (Worker non configurato)
+      await new Promise(r=>setTimeout(r,400));
+      toast("✅ Codice demo inviato. Usa 123456 per test.");
+    }
+    // Passa allo step 2
+    window._recStage = "verify";
+    document.getElementById("rec-step-otp").style.display = "block";
+    btn.textContent = "Verifica codice e reimposta";
+    btn.disabled = false;
+    document.getElementById("rec-resend").style.display = "block";
+    document.getElementById("rec-code").focus();
+  } catch (e) {
+    toast("❌ Errore di rete: " + e.message);
+    btn.disabled=false; btn.textContent="Invia codice";
+  }
+}
+
+// Step 2: verifica codice OTP + reimposta password
+async function doRecover(){
+  if (window._recStage === "send") return doRecoverSendCode();
+  const email=document.getElementById("rec-email").value.trim().toLowerCase();
+  const code=document.getElementById("rec-code").value.trim();
   const pw=document.getElementById("rec-pw").value;
   const pw2=document.getElementById("rec-pw2").value;
   const user=Object.values(state.users).find(u=>u.email===email);
   const emailOk=validEmail(email)&&!!user;
   document.getElementById("f-email").classList.toggle("invalid", !emailOk);
+  document.getElementById("f-code").classList.toggle("invalid", !/^\d{6}$/.test(code));
   document.getElementById("f-pw").classList.toggle("invalid", pw.length<8);
   document.getElementById("f-pw2").classList.toggle("invalid", pw!==pw2);
-  if(!emailOk||pw.length<8||pw!==pw2) return;
-  // Reimposta: nuovo salt + nuovo hash
-  const salt=genSalt(), hash=await hashPassword(pw, salt);
-  user.salt=salt; user.pwHash=hash; user.pwUpdatedAt=Date.now();
-  audit("password_reset", user.id); saveState();
-  toast("✅ Password reimpostata. Ora puoi accedere.");
-  setTimeout(()=>go("login"), 700);
+  if(!emailOk||!/^\d{6}$/.test(code)||pw.length<8||pw!==pw2) return;
+
+  const btn=document.getElementById("rec-submit"); btn.disabled=true; btn.textContent="Verifica…";
+  try {
+    if (AURA_MAIL_URL) {
+      const resp = await fetch(AURA_MAIL_URL + "/verify-otp", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code })
+      });
+      const data = await resp.json();
+      if (!data.ok) { toast("❌ " + (data.error||"Codice non valido")); btn.disabled=false; btn.textContent="Verifica codice e reimposta"; return; }
+    } else {
+      // Modalità demo: codice 123456
+      await new Promise(r=>setTimeout(r,300));
+      if (code !== "123456") { toast("❌ In modalità demo, usa il codice 123456"); btn.disabled=false; btn.textContent="Verifica codice e reimposta"; document.getElementById("f-code").classList.add("invalid"); return; }
+    }
+    // Verifica OK: reimposta password
+    const salt=genSalt(), hash=await hashPassword(pw, salt);
+    user.salt=salt; user.pwHash=hash; user.pwUpdatedAt=Date.now();
+    audit("password_reset", user.id); saveState();
+    toast("✅ Password reimpostata. Ora puoi accedere.");
+    setTimeout(()=>go("login"), 700);
+  } catch (e) {
+    toast("❌ Errore di rete: " + e.message);
+    btn.disabled=false; btn.textContent="Verifica codice e reimposta";
+  }
 }
 async function changePasswordFromSettings(){
   const pw=document.getElementById("set-pw").value;

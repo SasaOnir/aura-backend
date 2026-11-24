@@ -1,0 +1,24 @@
+# Configurazione Cloudflare Worker per Aura
+# Documentazione: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "aura-mail"
+main = "worker/worker.js"
+compatibility_date = "2026-11-24"
+
+# ─────────── KV namespace per memorizzare gli OTP ───────────
+# Crea il namespace con: npx wrangler kv:namespace create AURA_KV
+# Wrangler aggiornerà questo file con l'id giusto in automatico.
+[[kv_namespaces]]
+binding = "AURA_KV"
+id = "SOSTITUISCI_CON_L_ID_RESTITUITO_DA_WRANGLER"
+
+# ─────────── Secrets ───────────
+# La chiave Resend NON va scritta qui (è pubblica). La imposti con:
+#   npx wrangler secret put RESEND_API_KEY
+# Ti chiederà di incollare il valore, lo salva criptato su Cloudflare.
+
+# ─────────── (Opzionale) dominio personalizzato ───────────
+# Quando vuoi che il worker sia su un tuo dominio (es. mail.tuodominio.it):
+# [routes]
+# route = "mail.tuodominio.it/*"
+# oppure custom domain via dashboard Cloudflare.
