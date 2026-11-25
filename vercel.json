@@ -1,13 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": [
-    {
-      "src": "backend/src/api/index.ts",
-      "use": "@vercel/node",
+  "functions": {
+    "backend/src/api/index.ts": {
       "memory": 1024,
       "maxDuration": 30
     }
-  ],
+  },
   "buildCommand": "cd backend && npx prisma generate --schema=prisma/schema.prisma",
   "installCommand": "cd backend && npm ci --include=optional --no-audit --no-fund && cd ../frontend && npm ci --no-audit --no-fund",
   "routes": [
