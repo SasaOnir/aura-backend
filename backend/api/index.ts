@@ -4,8 +4,11 @@
 //
 // IMPORTANTE: questo file viene eseguito da Vercel come Node function.
 // Usa require() (CommonJS) per importare dal dist/ compilato.
+// NON importare '@vercel/node' (è un runtime Vercel, non una dep npm).
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Tipi minimali (no @vercel/node dep)
+type VercelRequest = any;
+type VercelResponse = any;
 
 // @ts-ignore — dist viene generato dal buildCommand
 const { AppModule } = require('../dist/src/app.module.js');
