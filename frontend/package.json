@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "postinstall": "prisma generate --schema=../backend/prisma/schema.prisma"
+    "postinstall": "PRISMA_DISABLE_AUTO_INSTALL=1 prisma generate --schema=../backend/prisma/schema.prisma"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.1",
