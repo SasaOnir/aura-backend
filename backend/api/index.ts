@@ -1,33 +1,16 @@
-// API handler per Vercel — usa il backend PRE-COMPILATO in dist/
-// Vercel builda il backend con 'npm run build' (nest build) → dist/main.js
-// Questo handler importa il Nest app già compilato e lo wrappa per serverless.
-//
-// IMPORTANTE: questo file viene eseguito da Vercel come Node function.
-// Usa require() (CommonJS) per importare dal dist/ compilato.
-// NON importare '@vercel/node' (è un runtime Vercel, non una dep npm).
+// API handler per Vercel — wrappa NestJS app come serverless handler
+// Importa i sorgenti TypeScript direttamente (Vercel @vercel/node li bundla).
+// NON usare require() con path a dist/ (non vengono inclusi nel bundle runtime).
 
-// Tipi minimali (no @vercel/node dep)
-type VercelRequest = any;
-type VercelResponse = any;
-
-// @ts-ignore — dist viene generato dal buildCommand (nest build → dist/, NO dist/src/)
-const { AppModule } = require('../dist/app.module.js');
-// @ts-ignore
-const { SuperAdminBootstrap } = require('../dist/bootstrap/super-admin.bootstrap.js');
-// @ts-ignore
-const { NestFactory } = require('@nestjs/core');
-// @ts-ignore
-const { ExpressAdapter } = require('@nestjs/platform-express');
-// @ts-ignore
-const { ValidationPipe } = require('@nestjs/common');
-// @ts-ignore
-const express = require('express');
-// @ts-ignore
-const serverlessExpress = require('@vendia/serverless-express');
-// @ts-ignore
-const helmet = require('helmet');
-// @ts-ignore
-const cookieParser = require('cookie-parser');
+import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
+import express from 'express';
+import serverlessExpress from '@vendia/serverless-express';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { AppModule } from '../src/app.module';
+import { SuperAdminBootstrap } from '../src/bootstrap/super-admin.bootstrap';
 
 let cachedHandler: any = null;
 
@@ -77,7 +60,7 @@ async function bootstrap() {
   return cachedHandler;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   const app = await bootstrap();
   return app(req, res);
 }

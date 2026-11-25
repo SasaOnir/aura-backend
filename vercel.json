@@ -6,9 +6,9 @@
       "src": "backend/api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": "dist/**/*,prisma/schema.prisma",
+        "includeFiles": "src/**/*,prisma/schema.prisma",
         "installCommand": "npm ci --include=optional --no-audit --no-fund",
-        "buildCommand": "npx prisma generate --schema=prisma/schema.prisma && npm run build"
+        "buildCommand": "npx prisma generate --schema=prisma/schema.prisma"
       }
     },
     {
