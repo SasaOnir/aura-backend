@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "PRISMA_DISABLE_AUTO_INSTALL=1 npx prisma generate --schema=../backend/prisma/schema.prisma && npm run build",
-  "installCommand": "npm ci",
+  "buildCommand": "PRISMA_DISABLE_AUTO_INSTALL=1 npx prisma generate --schema=../backend/prisma/schema.prisma && npm run build --prefix ../backend && npm run build",
+  "installCommand": "npm ci && npm ci --prefix ../backend --include=optional",
   "outputDirectory": ".next",
   "cleanUrls": true,
   "trailingSlash": false
