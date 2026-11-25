@@ -47,6 +47,20 @@ async function bootstrap() {
 
   await app.init();
 
+  // Error handler Express: cattura errori runtime delle route e li ritorna come JSON
+  // (Vercel non mostra log runtime, questo ci dà visibilità)
+  expressApp.use((err: any, req: any, res: any, next: any) => {
+    console.error('ROUTE ERROR:', req.method, req.path, err?.message);
+    if (res.headersSent) return next(err);
+    res.status(500).json({
+      error: 'route_failed',
+      message: err?.message || String(err),
+      stack: err?.stack?.split('\n').slice(0, 8),
+      name: err?.name,
+      code: err?.code,
+    });
+  });
+
   // Bootstrap Super Admin (idempotente, una tantum)
   try {
     const bootstrap = app.get(SuperAdminBootstrap);
