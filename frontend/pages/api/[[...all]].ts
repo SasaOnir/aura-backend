@@ -14,8 +14,8 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 
 // path: frontend/src/pages/api/[[...all]].ts → ../../../../backend/dist/...
-const AppModule = require('../../../../backend/dist/app.module').AppModule;
-const SuperAdminBootstrap = require('../../../../backend/dist/bootstrap/super-admin.bootstrap').SuperAdminBootstrap;
+const AppModule = require('../../../backend/dist/app.module').AppModule;
+const SuperAdminBootstrap = require('../../../backend/dist/bootstrap/super-admin.bootstrap').SuperAdminBootstrap;
 
 let cachedHandler: any = null;
 
