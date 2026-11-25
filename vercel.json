@@ -15,7 +15,7 @@
       "src": "frontend/package.json",
       "use": "@vercel/next",
       "config": {
-        "installCommand": "cd ../../ && npm ci --no-audit --no-fund && cd frontend && npm ci --no-audit --no-fund",
+        "installCommand": "npm ci --no-audit --no-fund",
         "buildCommand": "npm run build",
         "outputDirectory": ".next"
       }
