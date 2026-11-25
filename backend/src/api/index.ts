@@ -82,6 +82,11 @@ async function bootstrap() {
       hasDirect: !!process.env.DIRECT_URL,
       dbLen: (process.env.DATABASE_URL || '').length,
       directLen: (process.env.DIRECT_URL || '').length,
+      JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL || '(undefined)',
+      JWT_REFRESH_TTL: process.env.JWT_REFRESH_TTL || '(undefined)',
+      JWT_ACCESS_SECRET_LEN: (process.env.JWT_ACCESS_SECRET || '').length,
+      JWT_REFRESH_SECRET_LEN: (process.env.JWT_REFRESH_SECRET || '').length,
+      NODE_ENV: process.env.NODE_ENV || '(undefined)',
     });
   });
 
