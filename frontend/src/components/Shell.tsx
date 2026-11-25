@@ -67,13 +67,25 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <div className="p-3 border-t border-aura-line">
           <div className="px-3 py-2 mb-2">
             <div className="text-xs text-aura-mute">Connesso come</div>
-            <div className="text-sm text-aura-text truncate">{user.displayName}</div>
+            <div className="text-sm text-aura-text truncate font-medium">{user.displayName}</div>
             <div className="text-[11px] text-aura-dim truncate">{user.email}</div>
-            {isDemo && (
-              <div className="mt-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">
-                modalità demo
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {user.accountType === 'super_admin' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-aura-gold/15 text-aura-gold border border-aura-gold/30 font-medium">
+                  👑 Super Admin
+                </span>
+              )}
+              {user.accountType === 'staff' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-aura-teal/15 text-aura-teal border border-aura-teal/30 font-medium">
+                  🛡️ Collaboratore
+                </span>
+              )}
+              {isDemo && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/15 text-yellow-300 border border-yellow-500/30">
+                  demo
+                </span>
+              )}
+            </div>
           </div>
           <button onClick={() => logout().then(() => router.push('/login'))} className="btn-ghost w-full text-xs">
             Esci
