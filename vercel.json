@@ -21,7 +21,6 @@
     { "src": "/audit(.*)", "dest": "/backend/src/api/index.ts" },
     { "src": "/admin/(.*)", "dest": "/backend/src/api/index.ts" },
     { "src": "/health", "dest": "/backend/src/api/index.ts" },
-    { "src": "/debug-env", "dest": "/backend/src/api/index.ts" },
     { "src": "/(.*)", "dest": "/backend/src/api/index.ts" }
   ]
 }
