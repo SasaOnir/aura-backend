@@ -55,6 +55,10 @@
       "dest": "/backend/src/api/index.ts"
     },
     {
+      "src": "/debug-env",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
