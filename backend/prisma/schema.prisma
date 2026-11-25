@@ -163,7 +163,7 @@ model AuditLog {
   actorId               String?  @map("actor_id") @db.Uuid
   action                String
   resourceType          String   @map("resource_type")
-  resourceId            String?  @db.Uuid
+  resourceId            String?  @map("resource_id") @db.Uuid
   previousValueReference String? @map("previous_value_reference")
   newValueReference     String? @map("new_value_reference")
   reason                String?
