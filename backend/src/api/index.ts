@@ -1,24 +1,21 @@
-// API handler per Vercel — TEST: NestJS con AppModule MINIMALE (no Prisma/Passport/argon2)
-// Isola se il crash è NestJS core o un modulo pesante (Prisma, argon2, Passport).
+// API handler per Vercel — TEST: AppModule con solo ConfigModule + PrismaModule
+// Niente AuthModule (Passport JWT), niente SuperAdminBootstrap (argon2).
+// Isola se crash è PrismaClient o AuthModule/argon2.
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { Module, Controller, Get } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import express from 'express';
-
-// AppModule minimale — solo un controller /health, zero dipendenze
-@Controller()
-class HealthController {
-  @Get('health')
-  health() {
-    return { status: 'ok', ts: Date.now(), test: 'nestjs-minimal' };
-  }
-}
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  controllers: [HealthController],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../.env'] }),
+    PrismaModule,
+  ],
 })
-class MinimalModule {}
+class TestModule {}
 
 let cachedHandler: any = null;
 
@@ -27,9 +24,19 @@ async function bootstrap() {
 
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
-  const app = await NestFactory.create(MinimalModule, adapter, {
+  const app = await NestFactory.create(TestModule, adapter, {
     bufferLogs: true,
     logger: ['error', 'warn', 'log'],
+  });
+
+  app.getHttpAdapter().get('/health', async (_req: any, res: any) => {
+    try {
+      const prisma = app.get('PrismaService');
+      const count = await prisma.user.count();
+      res.json({ status: 'ok', ts: Date.now(), test: 'config+prisma', users: count });
+    } catch (e: any) {
+      res.json({ status: 'ok', ts: Date.now(), test: 'config+prisma', dbError: e.message });
+    }
   });
 
   await app.init();
