@@ -1,6 +1,5 @@
 // API handler per Vercel — wrappa NestJS app come serverless handler
-// Importa i sorgenti TypeScript direttamente (Vercel @vercel/node li bundla).
-// NON usare require() con path a dist/ (non vengono inclusi nel bundle runtime).
+// Posizionato in src/api/ così i path relativi a ../app.module sono puliti.
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -9,8 +8,8 @@ import express from 'express';
 import serverlessExpress from '@vendia/serverless-express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { AppModule } from '../src/app.module';
-import { SuperAdminBootstrap } from '../src/bootstrap/super-admin.bootstrap';
+import { AppModule } from '../app.module';
+import { SuperAdminBootstrap } from '../bootstrap/super-admin.bootstrap';
 
 let cachedHandler: any = null;
 

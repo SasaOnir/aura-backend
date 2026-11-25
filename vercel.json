@@ -3,7 +3,7 @@
   "framework": null,
   "builds": [
     {
-      "src": "backend/api/index.ts",
+      "src": "backend/src/api/index.ts",
       "use": "@vercel/node",
       "config": {
         "includeFiles": "src/**/*,prisma/schema.prisma",
@@ -22,14 +22,41 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/auth/(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/users(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/roles(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/staff(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/audit(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/admin/(.*)", "dest": "/backend/api/index.ts" },
-    { "src": "/health", "dest": "/backend/api/index.ts" },
-    { "src": "/(.*)", "dest": "/frontend/$1" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/users(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/roles(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/staff(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/audit(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/health",
+      "dest": "/backend/src/api/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
+    }
   ]
 }
