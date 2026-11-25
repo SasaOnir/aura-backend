@@ -25,8 +25,8 @@ async function bootstrap(): Promise<any> {
     const cookieParser = (await import('cookie-parser')).default;
 
     // path: frontend/pages/api/[[...all]].ts → ../../../backend/dist/...
-    const { AppModule } = require('../../../backend/dist/app.module');
-    const { SuperAdminBootstrap } = require('../../../backend/dist/bootstrap/super-admin.bootstrap');
+    const { AppModule } = require('../../../../backend/dist/app.module');
+    const { SuperAdminBootstrap } = require('../../../../backend/dist/bootstrap/super-admin.bootstrap');
 
     // ExceptionFilter senza decorator @Catch() (registro manualmente)
     class LoggingExceptionFilter implements ExceptionFilter {
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       bootError,
       nodeVersion: process.version,
       hasNestCore: (() => { try { require('@nestjs/core'); return true; } catch (e: any) { return e.message; } })(),
-      hasBackendDist: (() => { try { require('../../../backend/dist/app.module'); return true; } catch (e: any) { return e.message; } })(),
+      hasBackendDist: (() => { try { require('../../../../backend/dist/app.module'); return true; } catch (e: any) { return e.message; } })(),
     });
   }
 
