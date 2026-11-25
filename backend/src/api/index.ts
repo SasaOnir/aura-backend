@@ -1,21 +1,14 @@
-// API handler per Vercel — TEST: AppModule con solo ConfigModule + PrismaModule
-// Niente AuthModule (Passport JWT), niente SuperAdminBootstrap (argon2).
-// Isola se crash è PrismaClient o AuthModule/argon2.
+// API handler per Vercel — NestJS completo con Express instance diretta
+// Prisma 6 + adapter-neon (no binary query engine) → compatibile Node 26.
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 import express from 'express';
-import { PrismaModule } from '../prisma/prisma.module';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../.env'] }),
-    PrismaModule,
-  ],
-})
-class TestModule {}
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { AppModule } from '../app.module';
+import { SuperAdminBootstrap } from '../bootstrap/super-admin.bootstrap';
 
 let cachedHandler: any = null;
 
@@ -24,23 +17,45 @@ async function bootstrap() {
 
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
-  const app = await NestFactory.create(TestModule, adapter, {
+  const app = await NestFactory.create(AppModule, adapter, {
     bufferLogs: true,
     logger: ['error', 'warn', 'log'],
   });
 
-  app.getHttpAdapter().get('/health', async (_req: any, res: any) => {
-    try {
-      const prisma = app.get('PrismaService');
-      const count = await prisma.user.count();
-      res.json({ status: 'ok', ts: Date.now(), test: 'config+prisma', users: count });
-    } catch (e: any) {
-      res.json({ status: 'ok', ts: Date.now(), test: 'config+prisma', dbError: e.message });
-    }
+  app.use(helmet());
+  app.use(cookieParser());
+
+  const corsOrigin = process.env.CORS_ORIGIN || 'https://aura-backend-rouge.vercel.app';
+  app.enableCors({
+    origin: corsOrigin.split(',').map((o: string) => o.trim()),
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
+  app.getHttpAdapter().get('/health', (_req: any, res: any) =>
+    res.json({ status: 'ok', ts: Date.now(), nest: 'booted' }),
+  );
 
   await app.init();
 
+  // Bootstrap Super Admin (idempotente, una tantum)
+  try {
+    const bootstrap = app.get(SuperAdminBootstrap);
+    await bootstrap.run();
+  } catch (e: any) {
+    console.error('Bootstrap Super Admin fallito:', e.message);
+  }
+
+  // Handler = Express instance diretta (NO @vendia/serverless-express)
   cachedHandler = (req: any, res: any) => expressApp(req, res);
   return cachedHandler;
 }
