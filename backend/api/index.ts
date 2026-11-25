@@ -10,10 +10,10 @@
 type VercelRequest = any;
 type VercelResponse = any;
 
-// @ts-ignore — dist viene generato dal buildCommand
-const { AppModule } = require('../dist/src/app.module.js');
+// @ts-ignore — dist viene generato dal buildCommand (nest build → dist/, NO dist/src/)
+const { AppModule } = require('../dist/app.module.js');
 // @ts-ignore
-const { SuperAdminBootstrap } = require('../dist/src/bootstrap/super-admin.bootstrap.js');
+const { SuperAdminBootstrap } = require('../dist/bootstrap/super-admin.bootstrap.js');
 // @ts-ignore
 const { NestFactory } = require('@nestjs/core');
 // @ts-ignore
