@@ -70,6 +70,21 @@ async function bootstrap() {
     res.json({ status: 'ok', ts: Date.now(), nest: 'booted' }),
   );
 
+  // DEBUG: mostra le env vars DB (mascherate) per diagnosticare ERR_INVALID_URL
+  app.getHttpAdapter().get('/debug-env', (_req: any, res: any) => {
+    const mask = (s: string) => s ? s.replace(/:[^:@]+@/, ':***@').substring(0, 100) : '(undefined)';
+    res.json({
+      DATABASE_URL: mask(process.env.DATABASE_URL || ''),
+      DIRECT_URL: mask(process.env.DIRECT_URL || ''),
+      DATABASE_URL_UNPOOLED: mask(process.env.DATABASE_URL_UNPOOLED || ''),
+      NEON_BRANCH: process.env.NEON_BRANCH || '(undefined)',
+      hasDatabase: !!process.env.DATABASE_URL,
+      hasDirect: !!process.env.DIRECT_URL,
+      dbLen: (process.env.DATABASE_URL || '').length,
+      directLen: (process.env.DIRECT_URL || '').length,
+    });
+  });
+
   await app.init();
 
   // Error handler Express: cattura errori runtime delle route e li ritorna come JSON
