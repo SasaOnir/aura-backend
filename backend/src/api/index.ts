@@ -1,5 +1,5 @@
 // API handler per Vercel — wrappa NestJS app come serverless handler
-// Posizionato in src/api/ così i path relativi a ../app.module sono puliti.
+// Versione di test: Niente bootstrap Super Admin (argon2) per isolare il problema.
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -9,7 +9,6 @@ import serverlessExpress from '@vendia/serverless-express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '../app.module';
-import { SuperAdminBootstrap } from '../bootstrap/super-admin.bootstrap';
 
 let cachedHandler: any = null;
 
@@ -43,17 +42,13 @@ async function bootstrap() {
   );
 
   app.getHttpAdapter().get('/health', (_req: any, res: any) =>
-    res.json({ status: 'ok', ts: Date.now() }),
+    res.json({ status: 'ok', ts: Date.now(), nest: 'booted' }),
   );
 
   await app.init();
 
-  try {
-    const bootstrap = app.get(SuperAdminBootstrap);
-    await bootstrap.run();
-  } catch (e: any) {
-    console.error('Bootstrap Super Admin fallito:', e.message);
-  }
+  // TEST: NO bootstrap Super Admin (argon2) per isolare
+  console.log('NestJS app inizializzata (no bootstrap SA)');
 
   cachedHandler = serverlessExpress({ app: expressApp });
   return cachedHandler;
