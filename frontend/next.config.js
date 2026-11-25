@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
   reactStrictMode: true,
   // Bug Next 15 con App Router + Pages Router coesistenti: il validator
   // generato usa path sbagliati (../../app/ vs ../../../../src/app/).
