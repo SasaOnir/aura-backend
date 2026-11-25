@@ -1,5 +1,3 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -10,8 +8,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Tracing root = repo root (così il function bundle include backend/node_modules)
-  outputFileTracingRoot: path.resolve(__dirname, '../../'),
   serverExternalPackages: [
     '@nestjs/core',
     '@nestjs/common',
