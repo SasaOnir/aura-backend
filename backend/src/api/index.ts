@@ -3,12 +3,35 @@
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '../app.module';
 import { SuperAdminBootstrap } from '../bootstrap/super-admin.bootstrap';
+
+// Exception filter NestJS che ritorna il dettaglio errore (debug Vercel)
+@Catch()
+class DebugExceptionFilter implements ExceptionFilter {
+  catch(exception: any, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const res = ctx.getResponse();
+    const req = ctx.getRequest();
+    console.error('NESTJS EXCEPTION:', req?.method, req?.url, exception?.message);
+    const status = exception instanceof HttpException ? exception.getStatus() : 500;
+    const response: any = exception instanceof HttpException ? exception.getResponse() : null;
+    res.status(status).json({
+      error: 'nestjs_exception',
+      message: exception?.message || String(exception),
+      stack: exception?.stack?.split('\n').slice(0, 8),
+      name: exception?.name,
+      code: exception?.code,
+      nestResponse: typeof response === 'object' ? response : { message: response },
+      path: req?.url,
+      method: req?.method,
+    });
+  }
+}
 
 let cachedHandler: any = null;
 
@@ -31,6 +54,8 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   });
+
+  app.useGlobalFilters(new DebugExceptionFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({
