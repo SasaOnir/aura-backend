@@ -3,12 +3,11 @@
   "framework": null,
   "builds": [
     {
-      "src": "backend/src/api/index.ts",
+      "src": "backend/src/api/health.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": "src/**/*,prisma/schema.prisma",
-        "installCommand": "npm ci --include=optional --no-audit --no-fund",
-        "buildCommand": "npx prisma generate --schema=prisma/schema.prisma"
+        "includeFiles": "src/**/*",
+        "installCommand": "npm ci --include=optional --no-audit --no-fund"
       }
     },
     {
@@ -24,35 +23,35 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/auth/(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/users(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/roles(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/staff(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/audit(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/admin/(.*)",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/health",
-      "dest": "/backend/src/api/index.ts"
+      "dest": "/backend/src/api/health.ts"
     },
     {
       "src": "/(.*)",
