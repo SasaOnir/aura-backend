@@ -1,5 +1,5 @@
 // API handler per Vercel — wrappa NestJS app come serverless handler
-// Versione di debug: cattura e ritorna gli errori come JSON per diagnosticare
+// Lazy import di AppModule dentro il try/catch per catturare errori di load.
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -8,7 +8,6 @@ import express from 'express';
 import serverlessExpress from '@vendia/serverless-express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { AppModule } from '../app.module';
 
 let cachedHandler: any = null;
 let bootError: string | null = null;
@@ -16,6 +15,9 @@ let bootError: string | null = null;
 async function bootstrap() {
   if (bootError) throw new Error(bootError);
   if (cachedHandler) return cachedHandler;
+
+  // Lazy import per catturare errori di load (argon2 native, Prisma client, ecc.)
+  const { AppModule } = await import('../app.module');
 
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
@@ -61,7 +63,7 @@ export default async function handler(req: any, res: any) {
     const errJson = {
       error: 'bootstrap_failed',
       message: e?.message || String(e),
-      stack: e?.stack?.split('\n').slice(0, 10),
+      stack: e?.stack?.split('\n').slice(0, 15),
       name: e?.name,
       code: e?.code,
     };
