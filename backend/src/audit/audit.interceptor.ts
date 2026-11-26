@@ -9,6 +9,8 @@ import { Reflector } from '@nestjs/core';
 import { Observable, tap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AUDIT_KEY, AUDIT_RESOURCE_KEY } from './audit.decorator';
+import { clientIp } from '../common/client-ip';
+import { isUUID } from 'class-validator';
 
 /**
  * AuditInterceptor — scrive in audit_logs per ogni endpoint decorato con @Audit.
@@ -38,12 +40,13 @@ export class AuditInterceptor implements NestInterceptor {
 
     const req = ctx.switchToHttp().getRequest();
     const user = req.user as { id: string } | undefined;
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip;
+    const ip = clientIp(req);
     const ua = req.headers['user-agent'];
 
     // resourceId: dal path param 'id' (convenzione), o dal body, o null
-    const resourceId: string | undefined =
-      req.params?.id || req.body?.id || (req.params?.userId as string);
+    // Solo UUID validi: un valore diverso farebbe fallire l'INSERT e l'evento non verrebbe registrato.
+    const candidate: unknown = req.params?.id || req.body?.id || req.params?.userId;
+    const resourceId: string | undefined = typeof candidate === 'string' && isUUID(candidate) ? candidate : undefined;
 
     return next.handle().pipe(
       tap({

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -41,33 +41,33 @@ export class StaffController {
   @Post('invite')
   @Audit('staff.invite') @AuditResource('user')
   @RequirePermissions('staff.invite')
-  invite(@Body() dto: InviteDto) { return this.staff.invite(dto); }
+  invite(@Body() dto: InviteDto, @Req() req: Request) { return this.staff.invite(dto, (req as any).user.id); }
 
   @Patch(':userId/assign-role')
   @Audit('staff.assign_role') @AuditResource('user')
   @RequirePermissions('staff.invite')
-  assign(@Param('userId') userId: string, @Body() dto: AssignRoleDto, @Req() req: Request) {
+  assign(@Param('userId', ParseUUIDPipe) userId: string, @Body() dto: AssignRoleDto, @Req() req: Request) {
     return this.staff.assignRole(userId, dto.roleName, (req as any).user.id, dto.reason);
   }
 
   @Patch(':userId/revoke-role')
   @Audit('staff.revoke_role') @AuditResource('user')
   @RequirePermissions('staff.revoke')
-  revokeRole(@Param('userId') userId: string, @Body() dto: AssignRoleDto, @Req() req: Request) {
+  revokeRole(@Param('userId', ParseUUIDPipe) userId: string, @Body() dto: AssignRoleDto, @Req() req: Request) {
     return this.staff.revokeRole(userId, dto.roleName, (req as any).user.id, dto.reason);
   }
 
   @Patch(':userId/require-mfa')
   @Audit('staff.require_mfa') @AuditResource('user')
   @RequirePermissions('staff.require_mfa')
-  requireMfa(@Param('userId') userId: string, @Body() dto: RequireMfaDto) {
-    return this.staff.requireMfa(userId, dto.required);
+  requireMfa(@Param('userId', ParseUUIDPipe) userId: string, @Body() dto: RequireMfaDto, @Req() req: Request) {
+    return this.staff.requireMfa(userId, dto.required, (req as any).user.id);
   }
 
   @Patch(':userId/revoke')
   @Audit('staff.revoke') @AuditResource('user')
   @RequirePermissions('staff.revoke')
-  revoke(@Param('userId') userId: string, @Body() dto: ReasonDto, @Req() req: Request) {
+  revoke(@Param('userId', ParseUUIDPipe) userId: string, @Body() dto: ReasonDto, @Req() req: Request) {
     return this.staff.revoke(userId, (req as any).user.id, dto.reason);
   }
 }

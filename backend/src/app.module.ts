@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { validateEnv } from './config/env.validation';
+import { AuraThrottlerGuard } from './common/aura-throttler.guard';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -11,7 +15,9 @@ import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../.env'] }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../.env'], validate: validateEnv }),
+    // Limite globale: 120 richieste/minuto per IP. Gli endpoint /auth/* hanno limiti più stretti.
+    ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }] }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -20,6 +26,6 @@ import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
     AuditModule,
     AdminModule,
   ],
-  providers: [SuperAdminBootstrap],
+  providers: [SuperAdminBootstrap, { provide: APP_GUARD, useClass: AuraThrottlerGuard }],
 })
 export class AppModule {}

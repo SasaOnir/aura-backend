@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../auth/permissions.service';
 
 @Injectable()
 export class RolesService {
   private readonly logger = new Logger('RolesService');
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly permissions: PermissionsService) {}
 
   async list() {
     return this.prisma.role.findMany({
@@ -26,13 +27,14 @@ export class RolesService {
     return role;
   }
 
-  async create(data: { name: string; description?: string; scope: 'system' | 'organization' | 'artist'; permissionKeys?: string[] }) {
+  async create(data: { name: string; description?: string; scope: 'system' | 'organization' | 'artist'; permissionKeys?: string[] }, actorId: string) {
     const existing = await this.prisma.role.findUnique({ where: { name: data.name } });
     if (existing) throw new ConflictException('Nome ruolo già in uso.');
-    if (data.scope === 'system') {
-      // Solo il Super Admin può creare ruoli di sistema (verifica nel controller via permesso).
-      // Permessi di sistema → non possono includere i permessi protetti (gestiti dal seed).
+    // I ruoli di sistema li crea solo il Super Admin; gli altri solo con permessi che già possiedono.
+    if (data.scope === 'system' && !(await this.permissions.isSuperAdmin(actorId))) {
+      throw new ConflictException('Solo il Super Admin può creare ruoli di sistema.');
     }
+    await this.permissions.assertCanGrant(actorId, data.permissionKeys ?? []);
     return this.prisma.$transaction(async (tx) => {
       const role = await tx.role.create({
         data: { name: data.name, description: data.description, scope: data.scope, isProtected: false },
@@ -51,13 +53,15 @@ export class RolesService {
     });
   }
 
-  async update(id: string, data: { description?: string; addPermissionKeys?: string[]; removePermissionKeys?: string[] }) {
+  async update(id: string, data: { description?: string; addPermissionKeys?: string[]; removePermissionKeys?: string[] }, actorId: string) {
     const role = await this.prisma.role.findUnique({ where: { id } });
     if (!role) throw new NotFoundException('Ruolo non trovato.');
     if (role.isProtected) {
       // Per i ruoli protetti (super_admin) non permettiamo modifiche ai permessi da API.
       throw new ConflictException(`Il ruolo '${role.name}' è protetto: i permessi sono fissi (seedati).`);
     }
+
+    await this.permissions.assertCanGrant(actorId, data.addPermissionKeys ?? []);
 
     return this.prisma.$transaction(async (tx) => {
       if (data.description !== undefined) {

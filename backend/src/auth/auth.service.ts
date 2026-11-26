@@ -1,22 +1,40 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { hash, verify, needRehash } from '@node-rs/argon2';
-import { randomUUID, createHash } from 'crypto';
+import { hash, verify } from '@node-rs/argon2';
+import { needsRehash } from '../common/argon2-params';
+import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from './permissions.service';
 import { RegisterDto, LoginDto } from './dto';
+import { checkPasswordPolicy } from '../common/password-policy';
+
+export const JWT_ALG = 'HS256' as const;
+export const JWT_ISSUER = 'aura';
+export const JWT_AUDIENCE = 'aura-api';
+
+// argon2id (OWASP: m=19MiB, t=2, p=1 come minimo)
+const ARGON_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 } as const;
+
+const INVALID_CREDENTIALS = 'Credenziali non valide.';
+const INVALID_REFRESH = 'Sessione non valida o scaduta.';
+
+// Accetta sia il client Prisma sia il client di transazione.
+type RefreshTokenWriter = { refreshToken: { create: (args: any) => Promise<{ id: string; expiresAt: Date }> } };
 
 export interface JwtPayload {
-  sub: string;   // user id
+  sub: string;
   email: string;
   type: 'access' | 'refresh';
-  jti?: string;  // refresh token id (per rotazione)
+  jti?: string;
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger('AuthService');
+  // Hash fittizio: serve a spendere lo stesso tempo di CPU anche quando l'email
+  // non esiste, così il tempo di risposta non rivela quali account esistono.
+  private dummyHash = '';
 
   constructor(
     private readonly prisma: PrismaService,
@@ -25,41 +43,41 @@ export class AuthService {
     private readonly permissions: PermissionsService,
   ) {}
 
-  // ─── Registrazione (utente base: listener o artist) ────────────────────
+  async onModuleInit() {
+    this.dummyHash = await hash(randomBytes(16).toString('hex'), ARGON_OPTS);
+  }
+
+  // ─── Registrazione ─────────────────────────────────────────────────────
   async register(dto: RegisterDto, ip?: string, ua?: string) {
     const email = dto.email.trim().toLowerCase();
 
+    const policyError = checkPasswordPolicy(dto.password, { email, displayName: dto.displayName });
+    if (policyError) throw new BadRequestException(policyError);
+
     const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) throw new ConflictException('Email già registrata.');
+    if (existing) {
+      // TODO(fase 2): con la verifica email la risposta diventa identica per
+      // email nuova ed esistente (anti-enumeration). Oggi la mitigazione è il
+      // rate limit di 5 registrazioni/ora per IP.
+      throw new ConflictException('Email già registrata.');
+    }
 
-    if (dto.password.length < 8) throw new UnauthorizedException('Password troppo corta (min 8).');
-
-    const passwordHash = await hash(dto.password, {
-      memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2,
-    });
+    const passwordHash = await hash(dto.password, ARGON_OPTS);
 
     const user = await this.prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
           email,
           passwordHash,
-          displayName: dto.displayName,
+          displayName: dto.displayName.trim(),
           accountType: dto.accountType,
           status: 'active',
-          emailVerified: false, // in produzione: email di conferma
+          emailVerified: false,
         },
       });
       await tx.userProfile.create({ data: { userId: u.id, language: 'it' } });
       await tx.auditLog.create({
-        data: {
-          actorId: u.id,
-          action: 'user.register',
-          resourceType: 'user',
-          resourceId: u.id,
-          ip: ip as any,
-          userAgent: ua,
-          result: 'success',
-        },
+        data: { actorId: u.id, action: 'user.register', resourceType: 'user', resourceId: u.id, ip, userAgent: ua, result: 'success' },
       });
       return u;
     });
@@ -73,35 +91,24 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (!user || !user.passwordHash) {
-      // Non svelare quale dei due è sbagliato (anti user-enumeration)
-      throw new UnauthorizedException('Credenziali non valide.');
-    }
-    if (user.status !== 'active') {
-      throw new UnauthorizedException('Account sospeso o non verificato.');
+    // Verifica SEMPRE un hash (reale o fittizio): niente differenze di timing.
+    const ok = await verify(user?.passwordHash || this.dummyHash, dto.password).catch(() => false);
+
+    // Stesso errore per: utente inesistente, password errata, account non attivo.
+    if (!user || !user.passwordHash || !ok || user.status !== 'active') {
+      await this.auditLoginFailure(user?.id, ip, ua);
+      throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    const ok = await verify(user.passwordHash, dto.password);
-    if (!ok) throw new UnauthorizedException('Credenziali non valide.');
-
-    // Re-hash se i parametri di argon2 sono cambiati (PRD §15)
-    if (needRehash(user.passwordHash, { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 })) {
-      const newHash = await hash(dto.password, { memoryCost: 19456, timeCost: 2, parallelism: 1, algorithm: 2 });
+    if (needsRehash(user.passwordHash, ARGON_OPTS)) {
+      const newHash = await hash(dto.password, ARGON_OPTS);
       await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
     }
 
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
       await tx.auditLog.create({
-        data: {
-          actorId: user.id,
-          action: 'auth.login',
-          resourceType: 'user',
-          resourceId: user.id,
-          ip: ip as any,
-          userAgent: ua,
-          result: 'success',
-        },
+        data: { actorId: user.id, action: 'auth.login', resourceType: 'user', resourceId: user.id, ip, userAgent: ua, result: 'success' },
       });
     });
 
@@ -109,44 +116,63 @@ export class AuthService {
     return { user: this.publicUser(user), ...tokens };
   }
 
-  // ─── Refresh con rotation (PRD §15: sessioni sicure) ───────────────────
+  private async auditLoginFailure(userId: string | undefined, ip?: string, ua?: string) {
+    try {
+      await this.prisma.auditLog.create({
+        data: { actorId: userId, action: 'auth.login', resourceType: 'user', resourceId: userId, ip, userAgent: ua, result: 'failure' },
+      });
+    } catch (e) {
+      this.logger.error(`Audit login failure non scritto: ${(e as Error).message}`);
+    }
+  }
+
+  // ─── Refresh con rotazione atomica + rilevamento del riuso ─────────────
   async refresh(refreshToken: string, ip?: string, ua?: string) {
     const tokenHash = this.hashToken(refreshToken);
-    const record = await this.prisma.refreshToken.findUnique({
-      where: { tokenHash },
+
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      const record = await tx.refreshToken.findUnique({ where: { tokenHash } });
+      if (!record || record.expiresAt < new Date()) return { kind: 'invalid' as const };
+
+      // "Claim" atomico: solo UNA richiesta concorrente può revocare il token.
+      const claimed = await tx.refreshToken.updateMany({
+        where: { id: record.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+      if (claimed.count === 0) {
+        // Token già usato/revocato che qualcuno ripresenta = probabile furto.
+        // Si revoca l'intera famiglia di sessioni dell'utente.
+        await tx.refreshToken.updateMany({ where: { userId: record.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+        await tx.auditLog.create({
+          data: { actorId: record.userId, action: 'auth.refresh_reuse_detected', resourceType: 'user', resourceId: record.userId, ip, userAgent: ua, result: 'denied' },
+        });
+        return { kind: 'reuse' as const };
+      }
+
+      const user = await tx.user.findUnique({ where: { id: record.userId } });
+      if (!user || user.status !== 'active') return { kind: 'invalid' as const };
+
+      const tokens = await this.issueTokens(user, ip, ua, tx);
+      await tx.refreshToken.update({ where: { id: record.id }, data: { replacedById: tokens.refreshId } });
+      return { kind: 'ok' as const, user, tokens };
     });
-    if (!record || record.revokedAt || record.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token non valido o scaduto.');
-    }
 
-    const user = await this.prisma.user.findUnique({ where: { id: record.userId } });
-    if (!user || user.status !== 'active') throw new UnauthorizedException('Account non attivo.');
-
-    // Rotazione: revoca il vecchio, emetti uno nuovo (anti riuso)
-    const newTokens = await this.issueTokens(user, ip, ua);
-
-    await this.prisma.refreshToken.update({
-      where: { id: record.id },
-      data: { revokedAt: new Date(), replacedById: this.parseUuid(newTokens.refreshId) },
-    });
-
-    return { user: this.publicUser(user), ...newTokens };
+    // Il throw avviene FUORI dalla transazione, altrimenti la revoca della famiglia verrebbe annullata.
+    if (outcome.kind !== 'ok') throw new UnauthorizedException(INVALID_REFRESH);
+    return { user: this.publicUser(outcome.user), ...outcome.tokens };
   }
 
   // ─── Logout ────────────────────────────────────────────────────────────
   async logout(userId: string, refreshToken?: string) {
     if (refreshToken) {
-      const tokenHash = this.hashToken(refreshToken);
+      // Vincolato all'utente autenticato: non si possono revocare i token altrui.
       await this.prisma.refreshToken.updateMany({
-        where: { tokenHash, revokedAt: null },
+        where: { tokenHash: this.hashToken(refreshToken), userId, revokedAt: null },
         data: { revokedAt: new Date() },
       });
     } else {
-      // Logout totale: revoca tutti i refresh token attivi
-      await this.prisma.refreshToken.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
+      await this.prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
     }
     await this.prisma.auditLog.create({
       data: { actorId: userId, action: 'auth.logout', resourceType: 'user', resourceId: userId, result: 'success' },
@@ -154,50 +180,41 @@ export class AuthService {
     return { ok: true };
   }
 
-  // ─── Issue tokens ──────────────────────────────────────────────────────
-  private async issueTokens(user: any, ip?: string, ua?: string) {
+  // ─── Emissione token ───────────────────────────────────────────────────
+  private async issueTokens(
+    user: { id: string; email: string },
+    ip?: string,
+    ua?: string,
+    db: RefreshTokenWriter = this.prisma,
+  ) {
     const accessSecret = this.config.getOrThrow<string>('JWT_ACCESS_SECRET');
-    const refreshSecret = this.config.getOrThrow<string>('JWT_REFRESH_SECRET');
     const accessTtl = Number(this.config.get('JWT_ACCESS_TTL') || 900);
     const refreshTtl = Number(this.config.get('JWT_REFRESH_TTL') || 2592000);
 
-    const payload: Omit<JwtPayload, 'type'> = { sub: user.id, email: user.email };
-
     const accessToken = await this.jwt.signAsync(
-      { ...payload, type: 'access' },
-      { secret: accessSecret, expiresIn: accessTtl },
+      { sub: user.id, email: user.email, type: 'access' } satisfies JwtPayload,
+      { secret: accessSecret, expiresIn: accessTtl, algorithm: JWT_ALG, issuer: JWT_ISSUER, audience: JWT_AUDIENCE },
     );
-    const refreshToken = randomUUID() + '.' + randomUUID();
 
-    // Salva il refresh token (hash) in DB
-    const tokenHash = this.hashToken(refreshToken);
-    const record = await this.prisma.refreshToken.create({
+    // 256 bit di entropia dal CSPRNG; nel DB resta solo lo SHA-256.
+    const refreshToken = randomBytes(32).toString('base64url');
+    const record = await db.refreshToken.create({
       data: {
         userId: user.id,
-        tokenHash,
+        tokenHash: this.hashToken(refreshToken),
         userAgent: ua,
-        ip: ip as any,
+        ip,
         expiresAt: new Date(Date.now() + refreshTtl * 1000),
       },
     });
 
-    return {
-      accessToken,
-      refreshToken,
-      refreshTokenExpiresAt: record.expiresAt.toISOString(),
-      refreshId: record.id,
-    };
+    return { accessToken, refreshToken, refreshTokenExpiresAt: record.expiresAt.toISOString(), refreshId: record.id };
   }
 
   private hashToken(t: string): string {
     return createHash('sha256').update(t).digest('hex');
   }
-  private parseUuid(s: string): string {
-    // Best-effort: refreshId è già UUID
-    return s;
-  }
 
-  // ─── Public user shape (mai esporre passwordHash) ─────────────────────
   publicUser(u: any) {
     return {
       id: u.id,

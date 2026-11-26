@@ -2,7 +2,7 @@
 
 Sistema completo di amministrazione per la piattaforma musicale Aura. Implementa **Fase 1 del Master PRD** (Core e Aura Control): autenticazione, account, ruoli, organizzazioni, Super Admin, audit log, dashboard amministrativa, gestione collaboratori.
 
-> **Questo è un progetto reale, non una demo.** Stack: NestJS + Next.js + TypeScript + PostgreSQL + Redis + Prisma + Docker. Codice di produzione installabile con `docker compose up`.
+> **Stato onesto del progetto.** Il backend (Fase 1: auth, ruoli, staff, audit) è la base di un prodotto reale ed è stato irrobustito (vedi `SECURITY.md`). Il file `index.html` è invece un **prototipo dimostrativo** con auth locale al browser: non usarlo con dati reali. Mancano ancora i moduli musicali (brani, upload, pagamenti, royalty). Stack: NestJS + Next.js + TypeScript + PostgreSQL + Redis + Prisma + Docker.
 
 Il repo contiene anche il **prototipo HTML statico** originale (`index.html` + `worker/`) sviluppato come prova di UX — vedi la sezione "Prototipo statico" in fondo.
 
@@ -43,6 +43,7 @@ git clone https://github.com/SasaOnir/aura-backend.git
 cd aura-backend
 
 # 2. Crea .env (copia il template e personalizza i secret)
+#    Il compose NON ha più valori di default per i segreti: se ne manca uno, si ferma.
 cp .env.example .env
 # → cambia: JWT_ACCESS_SECRET, JWT_REFRESH_SECRET (openssl rand -base64 64)
 # → imposta: AURA_SUPERADMIN_EMAIL, AURA_SUPERADMIN_PASSWORD, AURA_SUPERADMIN_NAME

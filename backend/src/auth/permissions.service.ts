@@ -75,4 +75,37 @@ export class PermissionsService {
     });
     return !!ur;
   }
+
+  /**
+   * Anti privilege-escalation: chi non è Super Admin può concedere SOLO permessi
+   * che possiede già. Senza questa regola, un collaboratore con 'staff.invite'
+   * o 'roles.update' potrebbe darsi (o dare a un complice) qualsiasi permesso.
+   */
+  async assertCanGrant(actorId: string, permissionKeys: string[]): Promise<void> {
+    if (permissionKeys.length === 0) return;
+    if (await this.isSuperAdmin(actorId)) return;
+    const mine = await this.getPermissions(actorId);
+    const excess = permissionKeys.filter((k) => !mine.has(k));
+    if (excess.length > 0) {
+      this.logger.warn(`Escalation bloccata: ${actorId} ha tentato di concedere ${excess.join(', ')}`);
+      throw new ForbiddenException('Non puoi concedere permessi che non possiedi.');
+    }
+  }
+
+  /** Ruolo assegnabile solo se l'attore possiede tutti i permessi del ruolo. */
+  async assertCanGrantRole(actorId: string, roleId: string): Promise<void> {
+    const rps = await this.prisma.rolePermission.findMany({ where: { roleId }, include: { permission: true } });
+    await this.assertCanGrant(actorId, rps.map((rp) => rp.permission.permissionKey));
+  }
+
+  /**
+   * Un collaboratore non può agire (sospendere, revocare, cancellare) su chi
+   * ha più permessi di lui. Il Super Admin può agire su tutti (tranne se stesso, gestito altrove).
+   */
+  async assertOutranks(actorId: string, targetId: string): Promise<void> {
+    if (await this.isSuperAdmin(actorId)) return;
+    const [mine, theirs] = await Promise.all([this.getPermissions(actorId), this.getPermissions(targetId)]);
+    const above = [...theirs].filter((k) => !mine.has(k));
+    if (above.length > 0) throw new ForbiddenException('Non puoi agire su un account con privilegi superiori ai tuoi.');
+  }
 }

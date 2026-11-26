@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../auth/permissions.service';
+import { BadRequestException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger('UsersService');
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly permissions: PermissionsService) {}
 
   async list(opts: { limit?: number; cursor?: string; search?: string; accountType?: string }) {
-    const take = Math.min(Number(opts.limit) || 50, 200);
+    const take = Math.min(Math.max(Number(opts.limit) || 50, 1), 200);
+    if (opts.cursor && !isUUID(opts.cursor)) throw new BadRequestException('Cursor non valido.');
+    if (opts.search && opts.search.length > 100) throw new BadRequestException('Ricerca troppo lunga.');
     const where: any = {};
     if (opts.accountType) where.accountType = opts.accountType;
     if (opts.search) {
@@ -64,17 +69,20 @@ export class UsersService {
       where: { userId: id, revokedAt: null, role: { name: 'super_admin' } },
     });
     if (isSuper) throw new ConflictException('Il Super Admin non può essere sospeso.');
+    await this.permissions.assertOutranks(actorId, id);
 
-    return this.prisma.user.update({
-      where: { id },
-      data: { status: 'suspended' },
-      select: publicUserSelect,
+    // Sospensione + chiusura immediata di tutte le sessioni, in un'unica transazione.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+      return tx.user.update({ where: { id }, data: { status: 'suspended' }, select: publicUserSelect });
     });
   }
 
   async reactivate(id: string) {
     const target = await this.prisma.user.findUnique({ where: { id } });
     if (!target) throw new NotFoundException('Utente non trovato.');
+    // Un account cancellato (GDPR art.17) non si "resuscita".
+    if (target.status === 'deleted') throw new ConflictException('Account cancellato: non riattivabile.');
     return this.prisma.user.update({
       where: { id },
       data: { status: 'active' },
@@ -115,13 +123,22 @@ export class UsersService {
       where: { userId: id, revokedAt: null, role: { name: 'super_admin' } },
     });
     if (isSuper) throw new ConflictException('Il Super Admin non può essere cancellato.');
+    await this.permissions.assertOutranks(actorId, id);
 
-    // GDPR art.17 — cancellazione. Soft-delete via status='deleted' (dati per retention).
-    // In produzione: job asincrono che hard-delete dopo 30gg se nessun vincolo legale.
-    return this.prisma.user.update({
-      where: { id },
-      data: { status: 'deleted', email: `deleted+${id}@aura.local`, displayName: 'Utente cancellato' },
-      select: { id: true },
+    // GDPR art.17 — cancellazione: anonimizza i dati personali, rimuove le credenziali,
+    // chiude le sessioni. Resta solo la riga anonima (per integrità di audit/contabilità).
+    // In produzione: job asincrono che elimina del tutto dopo i termini di retention.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.userProfile.updateMany({
+        where: { userId: id },
+        data: { avatarUrl: null, biography: null, country: null, privacySettings: {} },
+      });
+      return tx.user.update({
+        where: { id },
+        data: { status: 'deleted', passwordHash: null, email: `deleted+${id}@aura.local`, displayName: 'Utente cancellato' },
+        select: { id: true },
+      });
     });
   }
 }

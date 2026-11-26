@@ -1,0 +1,50 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: backend/package-lock.json }
+      - run: npm ci
+      - run: npx prisma generate --schema=prisma/schema.prisma
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - name: Vulnerabilità delle dipendenze (high+)
+        run: npm run audit
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_PASSWORD: ci-only-password }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: schema.sql + hardening.sql su database vuoto
+        env: { PGPASSWORD: ci-only-password }
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f backend/db/schema.sql
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f backend/db/hardening.sql
+      - name: audit_logs deve essere append-only
+        env: { PGPASSWORD: ci-only-password }
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "INSERT INTO audit_logs(action,resource_type) VALUES ('ci','test');"
+          if psql -h localhost -U postgres -c "DELETE FROM audit_logs;" 2>/dev/null; then echo "DELETE non bloccato!"; exit 1; fi
+          if psql -h localhost -U postgres -c "UPDATE audit_logs SET action='x';" 2>/dev/null; then echo "UPDATE non bloccato!"; exit 1; fi
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }

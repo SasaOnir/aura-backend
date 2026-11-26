@@ -10,6 +10,10 @@
 #   backend   NestJS API       :4000
 #   frontend  Next.js app      :3000
 
+# SICUREZZA: nessun segreto ha un valore di default. Se manca una variabile
+# obbligatoria, `docker compose up` si ferma (sintassi ${VAR:?messaggio}).
+# Le porte dei servizi interni sono legate a 127.0.0.1: non raggiungibili da Internet.
+
 services:
   db:
     image: postgres:16-alpine
@@ -17,13 +21,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-aura}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aura_dev_pw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?imposta POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-aura}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - aura_db_data:/var/lib/postgresql/data
       - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./backend/db/hardening.sql:/docker-entrypoint-initdb.d/02_hardening.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aura} -d ${POSTGRES_DB:-aura}"]
       interval: 5s
@@ -35,8 +40,8 @@ services:
     container_name: aura_redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?imposta REDIS_PASSWORD in .env}"]
     volumes:
       - aura_redis_data:/data
 
@@ -45,11 +50,11 @@ services:
     container_name: aura_minio
     restart: unless-stopped
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?imposta S3_ACCESS_KEY in .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?imposta S3_SECRET_KEY in .env}
     command: server /data --console-address ":9001"
     volumes:
       - aura_minio_data:/data
@@ -66,28 +71,29 @@ services:
       redis:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-aura}:${POSTGRES_PASSWORD:-aura_dev_pw}@db:5432/${POSTGRES_DB:-aura}?schema=public
-      REDIS_URL: redis://redis:6379
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_secret_cambiami_almeno_64_byte_xxxxxxxxxxxxxxxxxxxxxxxxxxxx}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_cambiami_almeno_64_byte_yyyyyyyyyyyyyyyyyyy}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aura}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-aura}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?genera con openssl rand -base64 64}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?genera con openssl rand -base64 64}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-900}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-2592000}
-      AURA_SUPERADMIN_EMAIL: ${AURA_SUPERADMIN_EMAIL:-owner@aura.example}
-      AURA_SUPERADMIN_PASSWORD: ${AURA_SUPERADMIN_PASSWORD:-SuperAdmin_12345!}
+      AURA_SUPERADMIN_EMAIL: ${AURA_SUPERADMIN_EMAIL:?}
+      AURA_SUPERADMIN_PASSWORD: ${AURA_SUPERADMIN_PASSWORD:?}
       AURA_SUPERADMIN_NAME: ${AURA_SUPERADMIN_NAME:-Proprietario Aura}
       PORT: 4000
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       S3_ENDPOINT: http://minio:9000
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-aura-audio}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?}
       S3_FORCE_PATH_STYLE: "true"
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-onboarding@resend.dev}
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
 
   frontend:
     build:
@@ -101,7 +107,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
       NODE_ENV: ${NODE_ENV:-development}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   aura_db_data:

@@ -103,8 +103,8 @@ CREATE TABLE user_roles (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role_id         UUID NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
-  artist_id       UUID REFERENCES artists(id) ON DELETE CASCADE,
+  organization_id UUID,  -- FK aggiunta dopo la creazione di organizations/artists (vedi sotto)
+  artist_id       UUID,
   granted_by      UUID REFERENCES users(id),
   granted_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   revoked_at      TIMESTAMPTZ,
@@ -166,6 +166,12 @@ CREATE TABLE artists (
 );
 CREATE INDEX artists_owner_idx ON artists(owner_user_id);
 CREATE INDEX artists_org_idx ON artists(organization_id);
+
+-- FK di user_roles: devono stare QUI perché organizations e artists vengono create dopo user_roles.
+-- (In origine erano inline e lo script falliva su un database vuoto: "relation organizations does not exist".)
+ALTER TABLE user_roles
+  ADD CONSTRAINT user_roles_organization_fk FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  ADD CONSTRAINT user_roles_artist_fk       FOREIGN KEY (artist_id)       REFERENCES artists(id)       ON DELETE CASCADE;
 
 CREATE TABLE artist_members (
   id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),

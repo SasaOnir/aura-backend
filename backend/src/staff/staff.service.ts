@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../auth/permissions.service';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class StaffService {
   private readonly logger = new Logger('StaffService');
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly permissions: PermissionsService) {}
 
   async listStaff() {
     return this.prisma.adminAccount.findMany({
@@ -20,7 +22,7 @@ export class StaffService {
     displayName: string;
     roleNames: string[];
     sendInviteEmail?: boolean;
-  }) {
+  }, actorId: string) {
     const email = data.email.trim().toLowerCase();
     if (data.roleNames.length === 0) throw new BadRequestException('Almeno un ruolo è obbligatorio.');
 
@@ -35,6 +37,8 @@ export class StaffService {
     if (roles.some((r) => r.name === 'super_admin')) {
       throw new BadRequestException('Non puoi assegnare il ruolo super_admin.');
     }
+
+    for (const r of roles) await this.permissions.assertCanGrantRole(actorId, r.id);
 
     // Crea l'utente staff in stato 'pending_verification' (in prod: invia email con link
     // di setup password. Qui: crea con password random che l'operatore comunica).
@@ -68,6 +72,8 @@ export class StaffService {
       throw new ConflictException('Il ruolo super_admin non può essere assegnato via API.');
     }
 
+    await this.permissions.assertCanGrantRole(actorId, role.id);
+
     const existing = await this.prisma.userRole.findFirst({
       where: { userId, roleId: role.id, revokedAt: null },
     });
@@ -84,6 +90,7 @@ export class StaffService {
     const role = await this.prisma.role.findUnique({ where: { name: roleName } });
     if (!role) throw new BadRequestException('Ruolo non trovato.');
     if (role.isProtected) throw new ConflictException(`Il ruolo '${role.name}' è protetto.`);
+    await this.permissions.assertOutranks(actorId, userId);
 
     const ur = await this.prisma.userRole.findFirst({
       where: { userId, roleId: role.id, revokedAt: null },
@@ -96,7 +103,11 @@ export class StaffService {
     });
   }
 
-  async requireMfa(userId: string, required: boolean) {
+  async requireMfa(userId: string, required: boolean, actorId: string) {
+    // Abbassare la protezione MFA di un account è un'azione da Super Admin.
+    if (!required && !(await this.permissions.isSuperAdmin(actorId))) {
+      throw new ForbiddenException('Solo il Super Admin può disattivare l\'obbligo MFA.');
+    }
     const admin = await this.prisma.adminAccount.findUnique({ where: { userId } });
     if (!admin) throw new NotFoundException('Account staff non trovato.');
     return this.prisma.adminAccount.update({
@@ -111,6 +122,7 @@ export class StaffService {
       where: { userId, revokedAt: null, role: { name: 'super_admin' } },
     });
     if (isSuper) throw new ConflictException('Il Super Admin non può essere revocato.');
+    await this.permissions.assertOutranks(actorId, userId);
 
     return this.prisma.$transaction(async (tx) => {
       // Revoca tutti i ruoli attivi
@@ -123,7 +135,8 @@ export class StaffService {
         where: { userId },
         data: { status: 'revoked' },
       });
-      // Sospende l'utente
+      // Chiude tutte le sessioni e sospende l'utente
+      await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
       return tx.user.update({ where: { id: userId }, data: { status: 'suspended' } });
     });
   }

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -18,11 +19,12 @@ import { RequirePermissions } from '../auth/require-permissions.decorator';
 import { Audit, AuditResource } from '../audit/audit.decorator';
 import { AuditInterceptor } from '../audit/audit.interceptor';
 import { UsersService } from './users.service';
-import { IsString, MinLength, IsOptional } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
 
 class ReasonDto {
   @IsString()
   @MinLength(3)
+  @MaxLength(500)
   @IsOptional()
   reason?: string;
 }
@@ -41,7 +43,7 @@ export class UsersController {
 
   @Get(':id')
   @RequirePermissions('users.read')
-  get(@Param('id') id: string) {
+  get(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.getProfile(id);
   }
 
@@ -49,7 +51,7 @@ export class UsersController {
   @Audit('user.suspend')
   @AuditResource('user')
   @RequirePermissions('users.suspend')
-  suspend(@Param('id') id: string, @Body() dto: ReasonDto, @Req() req: Request) {
+  suspend(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReasonDto, @Req() req: Request) {
     return this.users.suspend(id, dto.reason || '', (req as any).user.id);
   }
 
@@ -57,7 +59,7 @@ export class UsersController {
   @Audit('user.reactivate')
   @AuditResource('user')
   @RequirePermissions('users.suspend')
-  reactivate(@Param('id') id: string) {
+  reactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.reactivate(id);
   }
 
@@ -65,7 +67,7 @@ export class UsersController {
   @Audit('user.export')
   @AuditResource('user')
   @RequirePermissions('users.export')
-  export(@Param('id') id: string, @Req() req: Request) {
+  export(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
     return this.users.export(id, (req as any).user.id);
   }
 
@@ -73,7 +75,7 @@ export class UsersController {
   @Audit('user.delete')
   @AuditResource('user')
   @RequirePermissions('users.delete')
-  delete(@Param('id') id: string, @Req() req: Request) {
+  delete(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
     return this.users.delete(id, (req as any).user.id);
   }
 }
