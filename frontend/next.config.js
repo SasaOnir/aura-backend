@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Bug Next 15 con App Router + Pages Router coesistenti: validator con path sbagliati
   typescript: {
     ignoreBuildErrors: true,
   },

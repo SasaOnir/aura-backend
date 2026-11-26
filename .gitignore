@@ -50,3 +50,4 @@ upload/
 
 # Local Netlify folder
 .netlify
+.neon
