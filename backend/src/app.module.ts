@@ -8,6 +8,7 @@ import { StaffModule } from './staff/staff.module';
 import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
 import { WebModule } from './web/web.module';
+import { MusicModule } from './music/music.module';
 import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
 
 @Module({
@@ -21,6 +22,7 @@ import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
     AuditModule,
     AdminModule,
     WebModule,
+    MusicModule,
   ],
   providers: [SuperAdminBootstrap],
 })

@@ -1,0 +1,507 @@
+import {
+  Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req, BadRequestException, NotFoundException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Request } from 'express';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+
+/**
+ * MusicController — copre catalogo pubblico + listener + artist.
+ *
+ * Pubbliche (no auth):
+ *   GET /music/catalog/tracks          — brani pubblicati (con paginazione + filtro genere)
+ *   GET /music/catalog/tracks/:id      — dettaglio brano (con credits + artist + release)
+ *   GET /music/catalog/artists         — artisti verificati
+ *   GET /music/catalog/artists/:slug   — profilo artista (con releases + tracks)
+ *   GET /music/catalog/genres          — generi con count brani
+ *   GET /music/catalog/search?q=...    — search brani/artisti/albums
+ *
+ * Listener (auth bearer):
+ *   GET  /music/me/playlists           — playlist utente
+ *   POST /music/me/playlists           — crea playlist
+ *   POST /music/me/playlists/:id/add   — aggiungi brano (body: trackId, position?)
+ *   POST /music/me/playlists/:id/remove — rimuovi brano (body: trackId)
+ *   GET  /music/me/follows             — artisti seguiti
+ *   POST /music/me/follows             — segui artista (body: artistId)
+ *   DELETE /music/me/follows/:artistId — smetti di seguire
+ *   POST /music/me/play                — registra ascolto (body: trackId, eventType, duration)
+ *   GET  /music/me/history             — storico ascolti
+ *   GET  /music/me/stats               — statistiche personali
+ *
+ * Artist (auth bearer + owner):
+ *   GET  /music/artist/profile         — profilo artista dell'utente
+ *   GET  /music/artist/my-releases     — miei release + tracks
+ *   POST /music/artist/releases        — crea release (body: title, type)
+ *   POST /music/artist/tracks          — crea track in un proprio release
+ *   GET  /music/artist/stats           — miei KPI (ascolti, follower, brani pubblicati)
+ */
+@Controller('music')
+export class MusicController {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+  ) {}
+
+  // ─── Helpers ─────────────────────────────────────────────────────────
+  private authUser(req: Request): { id: string } | null {
+    const h = req.headers['authorization'] as string | undefined;
+    if (!h?.startsWith('Bearer ')) return null;
+    try {
+      const payload = this.jwt.verify(h.slice(7), {
+        secret: process.env.JWT_ACCESS_SECRET || 'dev_access_secret_change_me',
+      });
+      return { id: payload.sub as string };
+    } catch {
+      return null;
+    }
+  }
+
+  private requireUser(req: Request): { id: string } {
+    const u = this.authUser(req);
+    if (!u) throw new BadRequestException('Authentication required');
+    return u;
+  }
+
+  // ─── CATALOGO PUBBLICO ────────────────────────────────────────────────
+
+  /** GET /music/catalog/tracks?limit=20&cursor=&genre= */
+  @Get('catalog/tracks')
+  async catalogTracks(@Query() q: { limit?: string; cursor?: string; genre?: string }) {
+    const limit = Math.min(parseInt(q.limit || '20', 10) || 20, 50);
+    const where: Prisma.TrackWhereInput = { status: 'published' };
+    if (q.genre) {
+      where.trackGenres = { some: { genre: { name: q.genre } } };
+    }
+    const items = await this.prisma.track.findMany({
+      where,
+      take: limit + 1,
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+      orderBy: { createdAt: 'desc' },
+      include: {
+        release: { include: { artist: true } },
+        trackGenres: { include: { genre: true } },
+        _count: { select: { listening: true } },
+      },
+    });
+    // Normalize: aggiungi .genres (estratto da trackGenres) per compatibilità SPA
+    const normalized = items.map((t) => ({
+      ...t,
+      genres: (t.trackGenres || []).map((tg) => tg.genre),
+    }));
+    const nextCursor = items.length > limit ? items[items.length - 1].id : null;
+    return { items: normalized.slice(0, limit), nextCursor };
+  }
+
+  /** GET /music/catalog/tracks/:id */
+  @Get('catalog/tracks/:id')
+  async catalogTrack(@Param('id') id: string) {
+    const t = await this.prisma.track.findUnique({
+      where: { id },
+      include: {
+        release: { include: { artist: true } },
+        trackGenres: { include: { genre: true } },
+        credits: true,
+        assets: { where: { assetType: { in: ['preview', 'master'] } } },
+        _count: { select: { listening: true, playlistItems: true } },
+      },
+    });
+    if (!t || t.status !== 'published') throw new NotFoundException('Track not found');
+    return { ...t, genres: (t.trackGenres || []).map((tg) => tg.genre) };
+  }
+
+  /** GET /music/catalog/artists */
+  @Get('catalog/artists')
+  async catalogArtists(@Query() q: { limit?: string; cursor?: string }) {
+    const limit = Math.min(parseInt(q.limit || '20', 10) || 20, 50);
+    const items = await this.prisma.artist.findMany({
+      where: { verificationStatus: { in: ['verified', 'pending', 'unverified'] } },
+      take: limit + 1,
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { releases: true, follows: true } },
+      },
+    });
+    const nextCursor = items.length > limit ? items[items.length - 1].id : null;
+    return { items: items.slice(0, limit), nextCursor };
+  }
+
+  /** GET /music/catalog/artists/:slug */
+  @Get('catalog/artists/:slug')
+  async catalogArtist(@Param('slug') slug: string) {
+    const artist = await this.prisma.artist.findUnique({
+      where: { slug },
+      include: {
+        releases: {
+          where: { status: 'published' },
+          include: {
+            tracks: { where: { status: 'published' }, orderBy: { position: 'asc' } },
+          },
+          orderBy: { releaseDate: 'desc' },
+        },
+        _count: { select: { follows: true, releases: true } },
+      },
+    });
+    if (!artist) throw new NotFoundException('Artist not found');
+    return artist;
+  }
+
+  /** GET /music/catalog/genres */
+  @Get('catalog/genres')
+  async catalogGenres() {
+    const genres = await this.prisma.genre.findMany({
+      include: { _count: { select: { trackGenres: true } } },
+      orderBy: { name: 'asc' },
+    });
+    return genres.map((g) => ({ id: g.id, name: g.name, tracksCount: g._count.trackGenres }));
+  }
+
+  /** GET /music/catalog/search?q=... */
+  @Get('catalog/search')
+  async catalogSearch(@Query('q') q: string) {
+    const term = (q || '').trim();
+    if (term.length < 2) return { tracks: [], artists: [], releases: [] };
+    const [tracks, artists, releases] = await Promise.all([
+      this.prisma.track.findMany({
+        where: { status: 'published', title: { contains: term, mode: 'insensitive' } },
+        take: 10,
+        include: { release: { include: { artist: true } } },
+      }),
+      this.prisma.artist.findMany({
+        where: { artistName: { contains: term, mode: 'insensitive' } },
+        take: 10,
+        include: { _count: { select: { follows: true } } },
+      }),
+      this.prisma.release.findMany({
+        where: { status: 'published', title: { contains: term, mode: 'insensitive' } },
+        take: 10,
+        include: { artist: true },
+      }),
+    ]);
+    return { tracks, artists, releases };
+  }
+
+  // ─── LISTENER (auth) ───────────────────────────────────────────────────
+
+  /** GET /music/me/playlists */
+  @Get('me/playlists')
+  async myPlaylists(@Req() req: Request) {
+    const u = this.requireUser(req);
+    const items = await this.prisma.playlist.findMany({
+      where: { ownerUserId: u.id },
+      include: { _count: { select: { items: true } } },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return { items };
+  }
+
+  /** POST /music/me/playlists { title, visibility? } */
+  @Post('me/playlists')
+  async createPlaylist(@Req() req: Request, @Body() body: { title: string; visibility?: string }) {
+    const u = this.requireUser(req);
+    if (!body?.title?.trim()) throw new BadRequestException('title required');
+    return this.prisma.playlist.create({
+      data: {
+        ownerUserId: u.id,
+        title: body.title.trim(),
+        visibility: (body.visibility as any) || 'private',
+      },
+    });
+  }
+
+  /** POST /music/me/playlists/:id/add { trackId, position? } */
+  @Post('me/playlists/:id/add')
+  async addToPlaylist(@Req() req: Request, @Param('id') id: string, @Body() body: { trackId: string; position?: number }) {
+    const u = this.requireUser(req);
+    const pl = await this.prisma.playlist.findUnique({ where: { id } });
+    if (!pl || pl.ownerUserId !== u.id) throw new NotFoundException('Playlist not found');
+    const count = await this.prisma.playlistTrack.count({ where: { playlistId: id } });
+    return this.prisma.playlistTrack.create({
+      data: {
+        playlistId: id,
+        trackId: body.trackId,
+        position: body.position ?? count + 1,
+      },
+    });
+  }
+
+  /** POST /music/me/playlists/:id/remove { trackId } */
+  @Post('me/playlists/:id/remove')
+  async removeFromPlaylist(@Req() req: Request, @Param('id') id: string, @Body() body: { trackId: string }) {
+    const u = this.requireUser(req);
+    const pl = await this.prisma.playlist.findUnique({ where: { id } });
+    if (!pl || pl.ownerUserId !== u.id) throw new NotFoundException('Playlist not found');
+    await this.prisma.playlistTrack.delete({ where: { playlistId_trackId: { playlistId: id, trackId: body.trackId } } });
+    return { ok: true };
+  }
+
+  /** GET /music/me/follows */
+  @Get('me/follows')
+  async myFollows(@Req() req: Request) {
+    const u = this.requireUser(req);
+    const items = await this.prisma.follow.findMany({
+      where: { followerUserId: u.id },
+      include: { artist: { include: { _count: { select: { follows: true } } } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { items: items.map((f) => f.artist) };
+  }
+
+  /** POST /music/me/follows { artistId } */
+  @Post('me/follows')
+  async followArtist(@Req() req: Request, @Body() body: { artistId: string }) {
+    const u = this.requireUser(req);
+    if (!body?.artistId) throw new BadRequestException('artistId required');
+    try {
+      return await this.prisma.follow.create({
+        data: { followerUserId: u.id, artistId: body.artistId },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002') return { ok: true, already: true };
+      throw e;
+    }
+  }
+
+  /** POST /music/me/follows/:artistId/unfollow */
+  @Post('me/follows/:artistId/unfollow')
+  async unfollowArtist(@Req() req: Request, @Param('artistId') artistId: string) {
+    const u = this.requireUser(req);
+    try {
+      await this.prisma.follow.delete({ where: { followerUserId_artistId: { followerUserId: u.id, artistId } } });
+    } catch {}
+    return { ok: true };
+  }
+
+  /** POST /music/me/play { trackId, eventType, duration? } — registra ascolto */
+  @Post('me/play')
+  async logPlay(
+    @Req() req: Request,
+    @Body() body: { trackId: string; eventType?: string; duration?: number; source?: string },
+  ) {
+    const u = this.authUser(req);
+    if (!body?.trackId) throw new BadRequestException('trackId required');
+    const track = await this.prisma.track.findUnique({ where: { id: body.trackId } });
+    if (!track) throw new NotFoundException('track not found');
+    const evt = await this.prisma.listeningEvent.create({
+      data: {
+        userId: u?.id || null,
+        trackId: body.trackId,
+        startedAt: new Date(),
+        endedAt: new Date(),
+        qualifiedDuration: body.duration || null,
+        source: body.source || 'web',
+        eventType: body.eventType || 'play',
+      },
+    });
+    return { ok: true, id: evt.id };
+  }
+
+  /** GET /music/me/history */
+  @Get('me/history')
+  async myHistory(@Req() req: Request, @Query() q: { limit?: string }) {
+    const u = this.requireUser(req);
+    const limit = Math.min(parseInt(q.limit || '50', 10) || 50, 100);
+    const items = await this.prisma.listeningEvent.findMany({
+      where: { userId: u.id },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: { track: { include: { release: { include: { artist: true } } } } },
+    });
+    return { items };
+  }
+
+  /** GET /music/me/stats */
+  @Get('me/stats')
+  async myStats(@Req() req: Request) {
+    const u = this.requireUser(req);
+    const [totalPlays, uniqueTracks, playlists, follows] = await Promise.all([
+      this.prisma.listeningEvent.count({ where: { userId: u.id } }),
+      this.prisma.listeningEvent.groupBy({
+        by: ['trackId'],
+        where: { userId: u.id },
+        _count: { trackId: true },
+      }),
+      this.prisma.playlist.count({ where: { ownerUserId: u.id } }),
+      this.prisma.follow.count({ where: { followerUserId: u.id } }),
+    ]);
+    const minutesListened = await this.prisma.listeningEvent.aggregate({
+      where: { userId: u.id },
+      _sum: { qualifiedDuration: true },
+    });
+    return {
+      totalPlays,
+      uniqueTracks: uniqueTracks.length,
+      playlistsCount: playlists,
+      followsCount: follows,
+      minutesListened: Math.round((minutesListened._sum.qualifiedDuration || 0) / 60),
+    };
+  }
+
+  // ─── ARTIST (auth + owner) ────────────────────────────────────────────
+
+  /** GET /music/artist/profile — profilo artista dell'utente loggato */
+  @Get('artist/profile')
+  async artistProfile(@Req() req: Request) {
+    const u = this.requireUser(req);
+    const artist = await this.prisma.artist.findFirst({
+      where: { OR: [{ ownerUserId: u.id }, { members: { some: { userId: u.id } } }] },
+      include: { _count: { select: { releases: true, follows: true } } },
+    });
+    if (!artist) throw new NotFoundException('No artist profile. Create one first.');
+    return artist;
+  }
+
+  /** POST /music/artist/profile { artistName, biography? } — crea profilo artista */
+  @Post('artist/profile')
+  async createArtistProfile(@Req() req: Request, @Body() body: { artistName: string; biography?: string }) {
+    const u = this.requireUser(req);
+    if (!body?.artistName?.trim()) throw new BadRequestException('artistName required');
+    const slug = body.artistName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const existing = await this.prisma.artist.findFirst({
+      where: { OR: [{ ownerUserId: u.id }, { members: { some: { userId: u.id } } }] },
+    });
+    if (existing) return existing;
+    return this.prisma.artist.create({
+      data: {
+        ownerUserId: u.id,
+        artistName: body.artistName.trim(),
+        slug,
+        biography: body.biography || null,
+        verificationStatus: 'unverified',
+      },
+    });
+  }
+
+  /** GET /music/artist/my-releases */
+  @Get('artist/my-releases')
+  async myReleases(@Req() req: Request) {
+    const u = this.requireUser(req);
+    const artist = await this.prisma.artist.findFirst({
+      where: { OR: [{ ownerUserId: u.id }, { members: { some: { userId: u.id } } }] },
+    });
+    if (!artist) throw new NotFoundException('No artist profile');
+    const releases = await this.prisma.release.findMany({
+      where: { artistId: artist.id },
+      include: {
+        tracks: {
+          include: { _count: { select: { listening: true } } },
+          orderBy: { position: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { artist, releases };
+  }
+
+  /** POST /music/artist/releases { title, releaseType, releaseDate? } */
+  @Post('artist/releases')
+  async createRelease(
+    @Req() req: Request,
+    @Body() body: { title: string; releaseType: string; releaseDate?: string },
+  ) {
+    const u = this.requireUser(req);
+    if (!body?.title?.trim()) throw new BadRequestException('title required');
+    if (!['single', 'ep', 'album'].includes(body.releaseType || '')) {
+      throw new BadRequestException('releaseType must be single|ep|album');
+    }
+    const artist = await this.prisma.artist.findFirst({
+      where: { OR: [{ ownerUserId: u.id }, { members: { some: { userId: u.id } } }] },
+    });
+    if (!artist) throw new NotFoundException('Create an artist profile first');
+    return this.prisma.release.create({
+      data: {
+        artistId: artist.id,
+        title: body.title.trim(),
+        releaseType: body.releaseType,
+        status: 'draft',
+        releaseDate: body.releaseDate ? new Date(body.releaseDate) : null,
+      },
+    });
+  }
+
+  /** POST /music/artist/tracks { releaseId, title, duration?, position? } */
+  @Post('artist/tracks')
+  async createTrack(
+    @Req() req: Request,
+    @Body() body: { releaseId: string; title: string; duration?: number; position?: number; explicit?: boolean },
+  ) {
+    const u = this.requireUser(req);
+    if (!body?.releaseId || !body?.title?.trim()) throw new BadRequestException('releaseId and title required');
+    // verify ownership
+    const release = await this.prisma.release.findUnique({
+      where: { id: body.releaseId },
+      include: { artist: true },
+    });
+    if (!release) throw new NotFoundException('release not found');
+    const isOwner =
+      release.artist.ownerUserId === u.id ||
+      !!(await this.prisma.artistMember.findFirst({
+        where: { artistId: release.artistId, userId: u.id },
+      }));
+    if (!isOwner) throw new BadRequestException('Not your release');
+    return this.prisma.track.create({
+      data: {
+        releaseId: body.releaseId,
+        title: body.title.trim(),
+        duration: body.duration || null,
+        position: body.position || 1,
+        explicit: body.explicit || false,
+        status: 'draft',
+      },
+    });
+  }
+
+  /** PATCH /music/artist/tracks/:id/publish — pubblica un brano */
+  @Patch('artist/tracks/:id/publish')
+  async publishTrack(@Req() req: Request, @Param('id') id: string) {
+    const u = this.requireUser(req);
+    const track = await this.prisma.track.findUnique({
+      where: { id },
+      include: { release: { include: { artist: true } } },
+    });
+    if (!track) throw new NotFoundException('track not found');
+    const isOwner =
+      track.release.artist.ownerUserId === u.id ||
+      !!(await this.prisma.artistMember.findFirst({
+        where: { artistId: track.release.artistId, userId: u.id },
+      }));
+    if (!isOwner) throw new BadRequestException('Not your track');
+    return this.prisma.track.update({ where: { id }, data: { status: 'published' } });
+  }
+
+  /** GET /music/artist/stats — KPI artista loggato */
+  @Get('artist/stats')
+  async artistStats(@Req() req: Request) {
+    const u = this.requireUser(req);
+    const artist = await this.prisma.artist.findFirst({
+      where: { OR: [{ ownerUserId: u.id }, { members: { some: { userId: u.id } } }] },
+      include: { _count: { select: { follows: true } } },
+    });
+    if (!artist) throw new NotFoundException('No artist profile');
+    const tracks = await this.prisma.track.findMany({
+      where: { release: { artistId: artist.id } },
+      select: { id: true },
+    });
+    const trackIds = tracks.map((t) => t.id);
+    const [totalPlays, plays7d, publishedTracks, releases] = await Promise.all([
+      trackIds.length
+        ? this.prisma.listeningEvent.count({ where: { trackId: { in: trackIds } } })
+        : Promise.resolve(0),
+      trackIds.length
+        ? this.prisma.listeningEvent.count({
+            where: { trackId: { in: trackIds }, createdAt: { gte: new Date(Date.now() - 7 * 86400_000) } },
+          })
+        : Promise.resolve(0),
+      this.prisma.track.count({ where: { release: { artistId: artist.id }, status: 'published' } }),
+      this.prisma.release.count({ where: { artistId: artist.id } }),
+    ]);
+    return {
+      followers: artist._count.follows,
+      totalPlays,
+      plays7d,
+      publishedTracks,
+      releases,
+    };
+  }
+}

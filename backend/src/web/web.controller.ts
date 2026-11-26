@@ -179,6 +179,83 @@ td .actions{display:flex;gap:6px;justify-content:flex-end}
 .tag-chip .x{cursor:pointer;opacity:.6}
 .tag-chip .x:hover{opacity:1}
 @media print{.sidebar,.topbar{display:none}}
+.mode-switch{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:9px;margin:12px 14px;border:1px solid var(--border)}
+.mode-btn{flex:1;padding:6px 4px;border-radius:7px;font-size:11px;font-weight:600;color:var(--muted);transition:all .12s}
+.mode-btn:hover{color:var(--text)}
+.mode-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(124,92,255,.3)}
+/* track row */
+.track-row{display:grid;grid-template-columns:40px 1fr auto auto;gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .12s;cursor:pointer}
+.track-row:hover{background:rgba(255,255,255,.03)}
+.track-row:last-child{border-bottom:0}
+.track-row .pos{font-size:14px;color:var(--muted);text-align:center;width:24px}
+.track-row .play-mini{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s}
+.track-row:hover .play-mini{opacity:1}
+.track-row:hover .pos{display:none}
+.track-row .t-info{min-width:0}
+.track-row .t-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-row .t-meta{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-row .t-dur{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace}
+.track-row .t-genres{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:200px}
+/* album card */
+.album-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:transform .15s,border-color .15s;cursor:pointer}
+.album-card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.album-card .cover{aspect-ratio:1;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:42px;font-weight:800;letter-spacing:-0.04em}
+.album-card .body{padding:14px}
+.album-card .body .title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album-card .body .artist{font-size:12px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album-card .body .meta{font-size:10px;color:var(--muted2);margin-top:6px;text-transform:uppercase;letter-spacing:0.05em}
+.album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
+/* player */
+.player-bar{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--border2);padding:12px 22px;display:grid;grid-template-columns:280px 1fr 200px;gap:24px;align-items:center;z-index:50;box-shadow:0 -10px 30px rgba(0,0,0,.3)}
+@media(max-width:900px){.player-bar{grid-template-columns:1fr;gap:10px;padding:10px 14px}}
+.player-now{display:flex;align-items:center;gap:12px;min-width:0}
+.player-now .pcover{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0}
+.player-now .pinfo{min-width:0}
+.player-now .pinfo .ptitle{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-now .pinfo .partist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-ctrl{display:flex;flex-direction:column;align-items:center;gap:8px}
+.player-btns{display:flex;align-items:center;gap:14px}
+.player-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:color .12s}
+.player-btn:hover{color:var(--text)}
+.player-btn.play{width:44px;height:44px;background:var(--accent);color:#fff}
+.player-btn.play:hover{background:var(--accent2);color:#fff}
+.player-progress{width:100%;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+.player-progress .bar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;position:relative}
+.player-progress .bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0%;transition:width .3s}
+.player-progress .bar:hover .fill{background:var(--accent2)}
+.player-extra{display:flex;justify-content:flex-end;gap:14px;color:var(--muted);font-size:11px;align-items:center}
+@media(max-width:900px){.player-extra{display:none}}
+/* hero search */
+.hero{background:linear-gradient(135deg,rgba(124,92,255,.15),rgba(79,140,255,.05));border:1px solid var(--border);border-radius:18px;padding:36px 30px;margin-bottom:24px;position:relative;overflow:hidden}
+.hero h1{font-size:32px;font-weight:800;letter-spacing:-0.03em;margin-bottom:8px}
+.hero h1 .grad{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);font-size:14px;margin-bottom:18px}
+.search-bar{display:flex;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:8px;gap:8px;align-items:center}
+.search-bar svg{margin-left:8px;color:var(--muted)}
+.search-bar input{flex:1;background:transparent;border:0;color:var(--text);outline:none;font-size:14px}
+.search-bar input::placeholder{color:var(--muted2)}
+.search-bar button{padding:8px 16px}
+/* section */
+.section-h{display:flex;align-items:center;justify-content:space-between;margin:24px 0 14px}
+.section-h h2{font-size:18px;font-weight:700;letter-spacing:-0.01em}
+.section-h .more{font-size:12px;color:var(--muted);cursor:pointer}
+.section-h .more:hover{color:var(--accent)}
+/* artist card */
+.artist-card{display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px;background:var(--panel);border:1px solid var(--border);border-radius:14px;transition:all .15s;cursor:pointer}
+.artist-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.artist-card .ava-lg{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:28px;margin-bottom:12px}
+.artist-card .name{font-weight:600;font-size:14px}
+.artist-card .followers{font-size:11px;color:var(--muted);margin-top:3px}
+.artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+/* chip filter */
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.chip{padding:6px 14px;border-radius:16px;background:var(--panel);border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .12s}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+.chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* stat big */
+.stat-big{display:flex;flex-direction:column;align-items:center;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:14px}
+.stat-big .num{font-size:42px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat-big .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;font-weight:600}
 </style>
 </head>
 <body>
@@ -253,55 +330,108 @@ const IC = {
   shield: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
   activity: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
   menu: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>',
+  play: '<svg fill="currentColor" stroke="none" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></svg>',
+  home: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12 12 3l9 9M5 10v10h14V10"/></svg>',
 };
 // ===== SPA ENTRYPOINT (segue in app.js inline sotto) =====
 </script>
 <script>
-// ==================== ROUTER + AUTH GUARD ====================
-const routes = {
-  '/login':    { render: loginPage,    public: true,  title:'Login' },
-  '/':         { render: dashPage,    public: false, title:'Dashboard' },
-  '/users':    { render: usersPage,   public: false, title:'Utenti' },
-  '/roles':    { render: rolesPage,   public: false, title:'Ruoli & Permessi' },
-  '/staff':    { render: staffPage,   public: false, title:'Staff' },
-  '/audit':    { render: auditPage,   public: false, title:'Audit Log' },
+// ==================== ROUTER + AUTH GUARD + MODE ====================
+const ROUTES_ADMIN = {
+  '/':         { render: dashPage,    title:'Dashboard' },
+  '/users':    { render: usersPage,   title:'Utenti' },
+  '/roles':    { render: rolesPage,   title:'Ruoli & Permessi' },
+  '/staff':    { render: staffPage,   title:'Staff' },
+  '/audit':    { render: auditPage,   title:'Audit Log' },
 };
+const ROUTES_LISTENER = {
+  '/':         { render: browsePage,  title:'Esplora' },
+  '/player/:id': { render: playerPage, title:'Player' },
+  '/playlists': { render: playlistsPage, title:'Le mie playlist' },
+  '/history':  { render: historyPage, title:'Cronologia' },
+  '/follows':  { render: followsPage, title:'Seguiti' },
+  '/stats':    { render: myStatsPage, title:'Statistiche' },
+};
+const ROUTES_ARTIST = {
+  '/':         { render: artistStudioPage, title:'Artist Studio' },
+  '/artist/releases': { render: artistReleasesPage, title:'I miei brani' },
+  '/artist/stats':    { render: artistStatsPage, title:'Le mie statistiche' },
+};
+function currentMode() { return store.get('mode') || 'admin'; }
+function setMode(m) { store.set('mode', m); location.hash = '#/'; router(); }
+function currentRoutes() {
+  const m = currentMode();
+  return m === 'admin' ? ROUTES_ADMIN : m === 'listener' ? ROUTES_LISTENER : ROUTES_ARTIST;
+}
 function currentRoute() { return location.hash.replace(/^#/,'') || '/'; }
 function navigate(path) { location.hash = '#'+path; }
 async function router() {
   const path = currentRoute();
-  const r = routes[path] || routes['/'];
-  // auth guard
+  const routes = currentRoutes();
+  // match dynamic route /player/:id
+  let r = routes[path];
+  let param = null;
+  if (!r) {
+    for (const k of Object.keys(routes)) {
+      if (k.includes(':')) {
+        const re = new RegExp('^'+k.replace(/:[^/]+/, '([^/]+)')+'$');
+        const m = path.match(re);
+        if (m) { r = routes[k]; param = m[1]; break; }
+      }
+    }
+  }
+  if (!r) r = routes['/'] || ROUTES_ADMIN['/'];
   const isLoggedIn = !!store.get('at');
-  if (!r.public && !isLoggedIn) { if (path !== '/login') location.hash = '#/login'; return; }
-  if (r.public && isLoggedIn && path === '/login') { location.hash = '#/'; return; }
-  document.title = (r.title||'Aura') + ' — Aura Admin';
+  if (!isLoggedIn) { if (path !== '/login') location.hash = '#/login'; return; }
+  if (path === '/login') { location.hash = '#/'; return; }
+  document.title = (r.title||'Aura') + ' — Aura';
   $('#app').innerHTML = '';
-  try { await r.render($('#app'), path); }
+  try { await r.render($('#app'), path, param); }
   catch (e) {
     $('#app').innerHTML = '<div class="content"><div class="card"><h3>Errore</h3><p style="color:var(--err);margin-top:8px">'+e.message+'</p><button class="btn sm" style="margin-top:14px" onclick="location.reload()">Ricarica</button></div></div>';
   }
-  // chiudi sidebar mobile dopo navigate
   $('.sidebar')?.classList.remove('open');
 }
 window.addEventListener('hashchange', router);
 
-// ==================== LAYOUT (shell per pagine autenticate) ====================
-function shell(path, contentHTML) {
+// ==================== LAYOUT (shell con mode switcher) ====================
+function shell(path, contentHTML, modeOverride) {
   const user = store.get('user') || {};
-  const navItems = [
-    { p:'/',         ico:'dash',  label:'Dashboard', },
-    { p:'/users',    ico:'users', label:'Utenti', },
-    { p:'/roles',    ico:'roles', label:'Ruoli', },
-    { p:'/staff',    ico:'staff', label:'Staff', },
-    { p:'/audit',    ico:'audit', label:'Audit Log', },
+  const mode = modeOverride || currentMode();
+  const navItems = mode === 'admin' ? [
+    { p:'/',         ico:'dash',  label:'Dashboard' },
+    { p:'/users',    ico:'users', label:'Utenti' },
+    { p:'/roles',    ico:'roles', label:'Ruoli' },
+    { p:'/staff',    ico:'staff', label:'Staff' },
+    { p:'/audit',    ico:'audit', label:'Audit Log' },
+  ] : mode === 'listener' ? [
+    { p:'/',         ico:'search', label:'Esplora' },
+    { p:'/playlists',ico:'check',  label:'Le mie playlist' },
+    { p:'/history',  ico:'activity', label:'Cronologia' },
+    { p:'/follows',  ico:'bell',   label:'Seguiti' },
+    { p:'/stats',    ico:'dash',   label:'Statistiche' },
+  ] : [
+    { p:'/',         ico:'staff',  label:'Artist Studio' },
+    { p:'/artist/releases', ico:'activity', label:'I miei brani' },
+    { p:'/artist/stats',    ico:'dash',     label:'Statistiche' },
   ];
+  const modes = [
+    { id:'admin',   label:'Admin' },
+    { id:'listener',label:'Listener' },
+    { id:'artist',  label:'Artist' },
+  ];
+  const modeSwitch = modes.map(m => '<button class="mode-btn'+(m.id===mode?' active':'')+'" onclick="setMode(\\''+m.id+'\\')">'+m.label+'</button>').join('');
   return '<div class="app">' +
     '<aside class="sidebar" id="sidebar">' +
       '<div class="brand"><div class="logo">A</div><div class="name"><span class="grad">Aura</span></div></div>' +
+      '<div class="mode-switch">'+modeSwitch+'</div>' +
       '<nav class="nav">' +
-        '<div class="nav-section">Console</div>' +
-        navItems.map(n => '<button class="nav-item'+(n.p===path?' active':'')+'" onclick="navigate(\\''+n.p+'\\')">'+IC[n.ico]+'<span>'+n.label+'</span></button>').join('') +
+        '<div class="nav-section">'+(mode==='admin'?'Console':mode==='listener'?'Ascolto':'Studio')+'</div>' +
+        navItems.map(n => {
+          // gestisci route attiva con parametri (es. /player/:id)
+          const isActive = n.p === path || (n.p.startsWith('/artist') && path.startsWith('/artist')) || (n.p === '/' && (path === '/' || path.startsWith('/player')));
+          return '<button class="nav-item'+(isActive?' active':'')+'" onclick="navigate(\\''+n.p+'\\')">'+IC[n.ico]+'<span>'+n.label+'</span></button>';
+        }).join('') +
       '</nav>' +
       '<div class="sidebar-foot">' +
         '<div class="ava">'+fmt.initials(user.displayName||user.email)+'</div>' +
@@ -312,7 +442,7 @@ function shell(path, contentHTML) {
     '<main class="main">' +
       '<div class="topbar">' +
         '<button class="menu-btn" onclick="document.getElementById(\\'sidebar\\').classList.toggle(\\'open\\')">'+IC.menu+'</button>' +
-        '<h1>'+(routes[path] && routes[path].title || 'Aura')+'</h1>' +
+        '<h1>'+(currentRoutes()[path]?.title || 'Aura')+'</h1>' +
         '<div class="meta"><span class="dot"></span> API online · <span class="mono">aura-ai-sa.vercel.app</span></div>' +
       '</div>' +
       '<div class="content">'+contentHTML+'</div>' +
@@ -605,6 +735,383 @@ async function auditPage(el, path) {
         '<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Azione</th><th>Attore</th><th>Risorsa</th><th>Risultato</th><th>IP</th><th>ID</th></tr></thead><tbody>'+rows+'</tbody></table></div>' +
       '</div>';
   } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+
+// ==================== MUSICA — PAGINE LISTENER ====================
+const musicState = { currentTrack: null, playing: false, queue: [], pos: 0 };
+
+// Format durata secondi → m:ss
+const dur = (s) => s ? Math.floor(s/60)+':'+String(s%60).padStart(2,'0') : '—';
+
+// Browse page (catalogo brani)
+async function browsePage(el, path, param) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento catalogo…</div>', 'listener');
+  try {
+    const [tracksRes, genres, artistsRes] = await Promise.all([
+      api('/music/catalog/tracks?limit=24'),
+      api('/music/catalog/genres'),
+      api('/music/catalog/artists?limit=8'),
+    ]);
+    const tracks = tracksRes.items || [];
+    const genresList = genres || [];
+    const artists = artistsRes.items || [];
+    const featuredArtists = artists.slice(0,8).map(a =>
+      '<div class="artist-card" onclick="navigate(\'/artist-profile/'+a.slug+'\')">' +
+        '<div class="ava-lg">'+fmt.initials(a.artistName)+'</div>' +
+        '<div class="name">'+(a.artistName||'—')+'</div>' +
+        '<div class="followers">'+(a._count?.follows||0)+' follower</div>' +
+      '</div>'
+    ).join('');
+    const trackList = tracks.map((t,i) =>
+      '<div class="track-row" onclick="playTrack(\''+t.id+'\')">' +
+        '<div class="pos">'+(i+1)+'</div>' +
+        '<div class="play-mini" style="grid-column:1">▶</div>' +
+        '<div class="t-info"><div class="t-title">'+(t.title||'—')+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'—')+' · '+(t.release?.title||'')+'</div></div>' +
+        '<div class="t-genres">'+(t.genres||[]).map(g => '<span class="badge">'+g.name+'</span>').join('')+'</div>' +
+        '<div class="t-dur">'+dur(t.duration)+'</div>' +
+      '</div>'
+    ).join('');
+    const chipRow = '<div class="chip-row"><button class="chip active" data-genre="">Tutti</button>' +
+      genresList.slice(0,8).map(g => '<button class="chip" data-genre="'+g.name+'">'+g.name+'</button>').join('') + '</div>';
+    $('.content', el).innerHTML =
+      '<div class="hero">' +
+        '<h1>Benvenuto su <span class="grad">Aura</span></h1>' +
+        '<p>Sfoglia il catalogo musicale indipendente. '+tracks.length+' brani pubblicati · '+artists.length+' artisti · '+genresList.length+' generi.</p>' +
+        '<div class="search-bar">' + IC.search + '<input id="q" placeholder="Cerca brani, artisti, album…" oninput="searchCatalog(this.value)"><button class="btn primary sm" onclick="searchCatalog(document.getElementById(\'q\').value)">Cerca</button></div>' +
+        '<div id="searchResults"></div>' +
+      '</div>' +
+      '<div class="section-h"><h2>Artisti in evidenza</h2></div>' +
+      '<div class="artist-grid">'+featuredArtists+'</div>' +
+      '<div class="section-h"><h2>Brani in evidenza</h2></div>' +
+      chipRow +
+      '<div class="card" style="padding:0"><div id="trackList">'+trackList+'</div></div>';
+    // filter chips
+    $$('.chip', el).forEach(c => c.addEventListener('click', () => {
+      $$('.chip', el).forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      filterByGenre(c.dataset.genre);
+    }));
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+window.filterByGenre = async (g) => {
+  const list = $('#trackList'); if (!list) return;
+  list.innerHTML = '<div class="loading"><div class="spinner"></div>Filtro…</div>';
+  const r = await api('/music/catalog/tracks?limit=24'+(g ? '&genre='+encodeURIComponent(g) : ''));
+  const tracks = r.items || [];
+  list.innerHTML = tracks.map((t,i) =>
+    '<div class="track-row" onclick="playTrack(\''+t.id+'\')">' +
+      '<div class="pos">'+(i+1)+'</div>' +
+      '<div class="t-info"><div class="t-title">'+(t.title||'—')+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'—')+' · '+(t.release?.title||'')+'</div></div>' +
+      '<div class="t-genres">'+(t.genres||[]).map(x => '<span class="badge">'+x.name+'</span>').join('')+'</div>' +
+      '<div class="t-dur">'+dur(t.duration)+'</div>' +
+    '</div>'
+  ).join('') || '<div class="empty"><div class="e-ico">'+IC.search+'</div>Nessun brano per questo genere</div>';
+};
+window.searchCatalog = async (q) => {
+  const out = $('#searchResults'); if (!out || q.length < 2) { if (out) out.innerHTML = ''; return; }
+  const r = await api('/music/catalog/search?q='+encodeURIComponent(q));
+  let html = '';
+  if (r.tracks?.length) html += '<div style="margin-top:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Brani</div>' + r.tracks.slice(0,5).map(t => '<div class="track-row" onclick="playTrack(\''+t.id+'\')"><div class="pos">♪</div><div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'')+'</div></div></div>').join('');
+  if (r.artists?.length) html += '<div style="margin-top:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Artisti</div>' + r.artists.slice(0,3).map(a => '<div class="track-row" onclick="navigate(\'/artist-profile/'+a.slug+'\')"><div class="pos">★</div><div class="t-info"><div class="t-title">'+a.artistName+'</div><div class="t-meta">'+(a._count?.follows||0)+' follower</div></div></div>').join('');
+  out.innerHTML = html || '<div style="margin-top:14px;color:var(--muted);font-size:13px">Nessun risultato.</div>';
+};
+
+// Player page (dettaglio brano)
+async function playerPage(el, path, trackId) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento brano…</div>', 'listener');
+  try {
+    const t = await api('/music/catalog/tracks/'+trackId);
+    const artist = t.release?.artist || {};
+    $('.content', el).innerHTML =
+      '<div style="display:grid;grid-template-columns:280px 1fr;gap:30px;margin-bottom:20px">' +
+        '<div style="aspect-ratio:1;border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:80px;font-weight:800;box-shadow:0 20px 60px rgba(124,92,255,.3)">'+(t.title||'♪')[0].toUpperCase()+'</div>' +
+        '<div>' +
+          '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:6px">Brano</div>' +
+          '<h1 style="font-size:32px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px">'+(t.title||'—')+'</h1>' +
+          '<div style="color:var(--muted);margin-bottom:18px"><span style="cursor:pointer;color:var(--accent)" onclick="navigate(\'/artist-profile/'+(artist.slug||'')+'\')">'+(artist.artistName||'—')+'</span> · '+(t.release?.title||'')+'</div>' +
+          '<div style="display:flex;gap:10px;margin-bottom:24px">' +
+            '<button class="btn primary" onclick="playTrack(\''+t.id+'\')">'+IC.play+' Riproduci</button>' +
+            '<button class="btn" onclick="addToPlaylist(\''+t.id+'\')">+ Aggiungi a playlist</button>' +
+            '<button class="btn" onclick="followArtist(\''+artist.id+'\')">♥ Segui artista</button>' +
+          '</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+(t.genres||[]).map(g => '<span class="badge accent">'+g.name+'</span>').join('')+'</div>' +
+          '<div class="card" style="padding:14px 16px;margin:0">' +
+            '<div class="stat-mini"><span>Durata</span><span class="v">'+dur(t.duration)+'</span></div>' +
+            '<div class="stat-mini"><span>Riproduzioni</span><span class="v">'+(t._count?.listening||0)+'</span></div>' +
+            '<div class="stat-mini"><span>In playlist</span><span class="v">'+(t._count?.playlistItems||0)+'</span></div>' +
+            '<div class="stat-mini"><span>Posizione release</span><span class="v">'+(t.position||1)+'</span></div>' +
+            '<div class="stat-mini"><span>Stato</span><span class="v">'+(t.status||'—')+'</span></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      (t.credits?.length ? '<div class="card"><div class="card-h"><h3>Crediti</h3></div>'+t.credits.map(c => '<div class="stat-mini"><span>'+(c.contributorRole||'—')+'</span><span class="v">'+(c.contributorName||'—')+(c.percentage?' · '+c.percentage+'%':'')+'</span></div>').join('')+'</div>' : '');
+    playTrack(t.id);
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+
+// Playlists page
+async function playlistsPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento playlist…</div>', 'listener');
+  try {
+    const r = await api('/music/me/playlists');
+    const items = r.items || [];
+    const list = items.length ? items.map(p =>
+      '<div class="album-card" onclick="navigate(\'/playlist/'+p.id+'\')">' +
+        '<div class="cover">♪</div>' +
+        '<div class="body"><div class="title">'+(p.title||'—')+'</div><div class="artist">'+(p._count?.items||0)+' brani · '+(p.visibility||'private')+'</div></div>' +
+      '</div>'
+    ).join('') : '<div class="empty"><div class="e-ico">'+IC.check+'</div>Nessuna playlist. Creane una!</div>';
+    $('.content', el).innerHTML =
+      '<div class="page-h">Le mie playlist</div><div class="page-sub">'+items.length+' playlist create</div>' +
+      '<button class="btn primary" style="margin-bottom:18px" onclick="createPlaylist()">'+IC.plus+' Nuova playlist</button>' +
+      '<div class="album-grid">'+list+'</div>';
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+window.createPlaylist = () => {
+  openModal('Nuova playlist',
+    '<div class="form-row"><label>Titolo</label><input id="pl_title" placeholder="La mia playlist"></div>' +
+    '<div class="form-row"><label>Visibilità</label><select id="pl_vis"><option value="private">Private</option><option value="public">Public</option><option value="collaborative">Collaborative</option></select></div>',
+    '<button class="btn" onclick="closeModal()">Annulla</button><button class="btn primary" onclick="createPlaylistSubmit()">Crea</button>');
+};
+window.createPlaylistSubmit = async () => {
+  const title = $('#pl_title').value.trim();
+  if (!title) return toast('Titolo obbligatorio','err');
+  try { await api('/music/me/playlists', { method:'POST', body: JSON.stringify({ title, visibility: $('#pl_vis').value }) }); closeModal(); toast('Playlist creata','ok'); router(); }
+  catch (e) { toast(e.message, 'err'); }
+};
+
+// History page
+async function historyPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento cronologia…</div>', 'listener');
+  try {
+    const r = await api('/music/me/history?limit=50');
+    const items = r.items || [];
+    const list = items.length ? items.map((l,i) =>
+      '<div class="track-row" onclick="playTrack(\''+(l.track?.id||'')+'\')">' +
+        '<div class="pos">'+(i+1)+'</div>' +
+        '<div class="t-info"><div class="t-title">'+(l.track?.title||'—')+'</div><div class="t-meta">'+(l.track?.release?.artist?.artistName||'')+' · '+fmt.rel(l.createdAt)+'</div></div>' +
+        '<div></div><div class="t-dur">'+(l.eventType==='complete'?'✓':'▶')+'</div>' +
+      '</div>'
+    ).join('') : '<div class="empty"><div class="e-ico">'+IC.activity+'</div>Nessun ascolto ancora.</div>';
+    $('.content', el).innerHTML =
+      '<div class="page-h">Cronologia</div><div class="page-sub">'+items.length+' ascolti recenti</div>' +
+      '<div class="card" style="padding:0">'+list+'</div>';
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+
+// Follows page
+async function followsPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento seguiti…</div>', 'listener');
+  try {
+    const r = await api('/music/me/follows');
+    const items = r.items || [];
+    const list = items.length ? items.map(a =>
+      '<div class="artist-card" onclick="navigate(\'/artist-profile/'+a.slug+'\')">' +
+        '<div class="ava-lg">'+fmt.initials(a.artistName)+'</div>' +
+        '<div class="name">'+(a.artistName||'—')+'</div>' +
+        '<div class="followers">'+(a._count?.follows||0)+' follower</div>' +
+      '</div>'
+    ).join('') : '<div class="empty"><div class="e-ico">'+IC.bell+'</div>Non segui nessun artista.</div>';
+    $('.content', el).innerHTML =
+      '<div class="page-h">Artisti seguiti</div><div class="page-sub">'+items.length+' artisti nella tua lista</div>' +
+      '<div class="artist-grid">'+list+'</div>';
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+
+// My stats page
+async function myStatsPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento statistiche…</div>', 'listener');
+  try {
+    const s = await api('/music/me/stats');
+    $('.content', el).innerHTML =
+      '<div class="page-h">Le mie statistiche</div><div class="page-sub">Il tuo consumo musicale su Aura</div>' +
+      '<div class="kpi-grid">' +
+        '<div class="kpi accent"><div class="kpi-ico">'+IC.activity+'</div><div class="label">Ascolti totali</div><div class="value">'+(s.totalPlays||0)+'</div><div class="delta">brani riprodotti</div></div>' +
+        '<div class="kpi ok"><div class="kpi-ico">'+IC.search+'</div><div class="label">Brani unici</div><div class="value">'+(s.uniqueTracks||0)+'</div><div class="delta">diversi</div></div>' +
+        '<div class="kpi accent"><div class="kpi-ico">'+IC.check+'</div><div class="label">Playlist</div><div class="value">'+(s.playlistsCount||0)+'</div><div class="delta">create</div></div>' +
+        '<div class="kpi warn"><div class="kpi-ico">'+IC.bell+'</div><div class="label">Seguiti</div><div class="value">'+(s.followsCount||0)+'</div><div class="delta">artisti</div></div>' +
+      '</div>' +
+      '<div class="card"><div class="card-h"><h3>Tempo di ascolto</h3></div><div class="stat-big" style="margin:0"><div class="num">'+(s.minutesListened||0)+'</div><div class="lbl">minuti totali</div></div></div>';
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+
+// ==================== MUSICA — PLAYER + AZIONI GLOBALI ====================
+async function playTrack(trackId) {
+  try {
+    musicState.currentTrack = trackId;
+    musicState.playing = true;
+    await api('/music/me/play', { method:'POST', body: JSON.stringify({ trackId, eventType: 'play', duration: 180 }) });
+    // fetch dettaglio per player bar
+    const t = await api('/music/catalog/tracks/'+trackId);
+    renderPlayerBar(t);
+    toast('▶ '+(t.title||'—'), 'ok', 2000);
+  } catch (e) { toast(e.message, 'err'); }
+}
+function renderPlayerBar(t) {
+  let bar = $('#playerBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'playerBar'; bar.className = 'player-bar';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML =
+    '<div class="player-now">' +
+      '<div class="pcover">'+(t.title||'♪')[0].toUpperCase()+'</div>' +
+      '<div class="pinfo"><div class="ptitle">'+(t.title||'—')+'</div><div class="partist">'+(t.release?.artist?.artistName||'—')+'</div></div>' +
+    '</div>' +
+    '<div class="player-ctrl">' +
+      '<div class="player-btns">' +
+        '<div class="player-btn">'+IC.refresh+'</div>' +
+        '<div class="player-btn play" onclick="togglePlay()">'+IC.play+'</div>' +
+        '<div class="player-btn">'+IC.refresh+'</div>' +
+      '</div>' +
+      '<div class="player-progress"><span>0:00</span><div class="bar"><div class="fill" id="playerFill"></div></div><span>'+dur(t.duration)+'</span></div>' +
+    '</div>' +
+    '<div class="player-extra">' +
+      '<span class="badge accent">'+(t.genres?.[0]?.name||'')+'</span>' +
+      '<button class="btn sm" onclick="navigate(\'/player/'+t.id+'\')">Dettagli</button>' +
+    '</div>';
+  // simulazione progress
+  let pct = 0;
+  clearInterval(window._playerTimer);
+  window._playerTimer = setInterval(() => {
+    pct += (100/((t.duration||180)));
+    if (pct > 100) { clearInterval(window._playerTimer); pct = 0; }
+    const f = $('#playerFill'); if (f) f.style.width = pct + '%';
+  }, 1000);
+}
+window.togglePlay = () => {
+  musicState.playing = !musicState.playing;
+  const btn = $('.player-btn.play'); if (btn) btn.innerHTML = musicState.playing ? IC.play : IC.check;
+};
+
+window.addToPlaylist = async (trackId) => {
+  try {
+    const r = await api('/music/me/playlists');
+    const items = r.items || [];
+    if (!items.length) { toast('Crea prima una playlist','warn'); navigate('/playlists'); return; }
+    openModal('Aggiungi a playlist',
+      items.map(p => '<div class="track-row" onclick="addToPlaylistSubmit(\''+p.id+'\',\''+trackId+'\')"><div class="pos">♪</div><div class="t-info"><div class="t-title">'+p.title+'</div><div class="t-meta">'+(p._count?.items||0)+' brani</div></div></div>').join(''),
+      '<button class="btn" onclick="closeModal()">Chiudi</button>');
+  } catch (e) { toast(e.message, 'err'); }
+};
+window.addToPlaylistSubmit = async (playlistId, trackId) => {
+  try { await api('/music/me/playlists/'+playlistId+'/add', { method:'POST', body: JSON.stringify({ trackId }) }); closeModal(); toast('Aggiunto alla playlist','ok'); }
+  catch (e) { toast(e.message, 'err'); }
+};
+window.followArtist = async (artistId) => {
+  if (!artistId) return toast('Artista non identificato','err');
+  try { await api('/music/me/follows', { method:'POST', body: JSON.stringify({ artistId }) }); toast('Artista seguito','ok'); }
+  catch (e) { toast(e.message, 'err'); }
+};
+
+// ==================== MUSICA — PAGINE ARTIST ====================
+async function artistStudioPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento studio…</div>', 'artist');
+  try {
+    let profile = null;
+    try { profile = await api('/music/artist/profile'); } catch {}
+    let stats = null;
+    try { stats = await api('/music/artist/stats'); } catch {}
+    if (!profile) {
+      $('.content', el).innerHTML =
+        '<div class="page-h">Artist Studio</div><div class="page-sub">Crea il tuo profilo artista per pubblicare musica</div>' +
+        '<div class="card" style="max-width:480px">' +
+          '<div class="card-h"><h3>Crea profilo artista</h3></div>' +
+          '<div class="form-row"><label>Nome artista</label><input id="ar_name" placeholder="es. DJ Scratch"></div>' +
+          '<div class="form-row"><label>Biografia</label><textarea id="ar_bio" rows="3" placeholder="Breve bio..."></textarea></div>' +
+          '<button class="btn primary" onclick="createArtistProfileSubmit()">Crea profilo</button>' +
+        '</div>';
+      return;
+    }
+    $('.content', el).innerHTML =
+      '<div class="page-h">Artist Studio</div><div class="page-sub">'+(profile.artistName||'—')+' · '+(profile.verificationStatus||'—')+'</div>' +
+      (stats ? '<div class="kpi-grid">' +
+        '<div class="kpi accent"><div class="kpi-ico">'+IC.bell+'</div><div class="label">Follower</div><div class="value">'+(stats.followers||0)+'</div><div class="delta">totali</div></div>' +
+        '<div class="kpi ok"><div class="kpi-ico">'+IC.activity+'</div><div class="label">Ascolti totali</div><div class="value">'+(stats.totalPlays||0)+'</div><div class="delta">sempre</div></div>' +
+        '<div class="kpi warn"><div class="kpi-ico">'+IC.activity+'</div><div class="label">Ascolti 7gg</div><div class="value">'+(stats.plays7d||0)+'</div><div class="delta">ultimi 7 giorni</div></div>' +
+        '<div class="kpi accent"><div class="kpi-ico">'+IC.check+'</div><div class="label">Brani pubblicati</div><div class="value">'+(stats.publishedTracks||0)+'</div><div class="delta">'+(stats.releases||0)+' release</div></div>' +
+      '</div>' : '') +
+      '<div class="section-h"><h2>Brani recenti</h2><button class="btn primary sm" onclick="createRelease()">+ Nuova release</button></div>' +
+      '<div class="card" id="artistTracks"><div class="loading"><div class="spinner"></div>Caricamento brani…</div></div>';
+    // fetch my releases per mostrare brani
+    try {
+      const r = await api('/music/artist/my-releases');
+      const rows = (r.releases||[]).flatMap(rel =>
+        (rel.tracks||[]).map(t =>
+          '<div class="track-row" onclick="navigate(\'/player/'+t.id+'\')">' +
+            '<div class="pos">'+(t.position||1)+'</div>' +
+            '<div class="t-info"><div class="t-title">'+(t.title||'—')+'</div><div class="t-meta">'+rel.title+' · '+(t.status==='published'?'<span class="badge ok">pubblicato</span>':'<span class="badge warn">'+t.status+'</span>')+'</div></div>' +
+            '<div>'+(t._count?.listening||0)+' ascolti</div>' +
+            '<div class="t-dur">'+dur(t.duration)+'</div>' +
+          '</div>'
+        )
+      ).join('') || '<div class="empty"><div class="e-ico">'+IC.staff+'</div>Nessun brano. Crea una release!</div>';
+      $('#artistTracks').innerHTML = rows;
+    } catch (e) { $('#artistTracks').innerHTML = '<div class="empty">'+e.message+'</div>'; }
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+window.createArtistProfileSubmit = async () => {
+  const name = $('#ar_name').value.trim();
+  if (!name) return toast('Nome obbligatorio','err');
+  try { await api('/music/artist/profile', { method:'POST', body: JSON.stringify({ artistName: name, biography: $('#ar_bio').value.trim() }) }); toast('Profilo artista creato','ok'); router(); }
+  catch (e) { toast(e.message, 'err'); }
+};
+window.createRelease = () => {
+  openModal('Nuova release',
+    '<div class="form-row"><label>Titolo release</label><input id="rel_title" placeholder="es. Primo EP"></div>' +
+    '<div class="form-row"><label>Tipo</label><select id="rel_type"><option value="single">Single</option><option value="ep">EP</option><option value="album">Album</option></select></div>' +
+    '<div class="hint">Dopo aver creato la release potrai aggiungere i brani singoli.</div>',
+    '<button class="btn" onclick="closeModal()">Annulla</button><button class="btn primary" onclick="createReleaseSubmit()">Crea</button>');
+};
+window.createReleaseSubmit = async () => {
+  const title = $('#rel_title').value.trim();
+  if (!title) return toast('Titolo obbligatorio','err');
+  try { await api('/music/artist/releases', { method:'POST', body: JSON.stringify({ title, releaseType: $('#rel_type').value }) }); closeModal(); toast('Release creata (bozza)','ok'); router(); }
+  catch (e) { toast(e.message, 'err'); }
+};
+
+// Artist releases page (elenco completo)
+async function artistReleasesPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento…</div>', 'artist');
+  try {
+    const r = await api('/music/artist/my-releases');
+    const releases = r.releases || [];
+    const list = releases.map(rel =>
+      '<div class="card">' +
+        '<div class="card-h"><h3>'+(rel.title||'—')+'</h3><span class="sub">'+(rel.releaseType||'')+' · '+(rel.status||'')+'</span></div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+(rel.releaseDate?fmt.date(rel.releaseDate):'')+'</div>' +
+        (rel.tracks?.length ? '<div style="padding:0;margin:0">'+rel.tracks.map(t =>
+          '<div class="track-row" onclick="navigate(\'/player/'+t.id+'\')"><div class="pos">'+(t.position||1)+'</div><div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+dur(t.duration)+' · '+(t.status==='published'?'pubblicato':t.status)+'</div></div>' +
+          (t.status==='published'?'<button class="btn sm" onclick="event.stopPropagation();navigate(\'/player/'+t.id+'\')">Apri</button>':'<button class="btn sm primary" onclick="event.stopPropagation();publishTrack(\''+t.id+'\')">Pubblica</button>')+'</div>'
+        ).join('')+'</div>' : '<div class="empty">Nessun brano</div>') +
+      '</div>'
+    ).join('') || '<div class="empty"><div class="e-ico">'+IC.staff+'</div>Nessuna release. Creane una dalla dashboard.</div>';
+    $('.content', el).innerHTML =
+      '<div class="page-h">I miei brani</div><div class="page-sub">'+releases.length+' release · pubblicazione e gestione</div>' +
+      '<button class="btn primary" style="margin-bottom:16px" onclick="createRelease()">'+IC.plus+' Nuova release</button>' +
+      list;
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p></div>'; }
+}
+window.publishTrack = async (id) => {
+  try { await api('/music/artist/tracks/'+id+'/publish', { method:'PATCH' }); toast('Brano pubblicato','ok'); router(); }
+  catch (e) { toast(e.message, 'err'); }
+};
+
+// Artist stats page
+async function artistStatsPage(el, path) {
+  el.innerHTML = shell(path, '<div class="loading"><div class="spinner"></div>Caricamento…</div>', 'artist');
+  try {
+    const s = await api('/music/artist/stats');
+    $('.content', el).innerHTML =
+      '<div class="page-h">Le mie statistiche</div><div class="page-sub">Performance del tuo catalogo artistico</div>' +
+      '<div class="kpi-grid">' +
+        '<div class="kpi accent"><div class="kpi-ico">'+IC.bell+'</div><div class="label">Follower</div><div class="value">'+(s.followers||0)+'</div><div class="delta">artisti</div></div>' +
+        '<div class="kpi ok"><div class="kpi-ico">'+IC.activity+'</div><div class="label">Ascolti totali</div><div class="value">'+(s.totalPlays||0)+'</div><div class="delta">brani</div></div>' +
+        '<div class="kpi warn"><div class="kpi-ico">'+IC.activity+'</div><div class="label">Ascolti 7gg</div><div class="value">'+(s.plays7d||0)+'</div><div class="delta">recenti</div></div>' +
+        '<div class="kpi accent"><div class="kpi-ico">'+IC.check+'</div><div class="label">Brani pubblicati</div><div class="value">'+(s.publishedTracks||0)+'</div><div class="delta">'+(s.releases||0)+' release</div></div>' +
+      '</div>';
+  } catch (e) { $('.content', el).innerHTML = '<div class="card"><h3>Errore</h3><p style="color:var(--err)">'+e.message+'</p><p style="color:var(--muted);margin-top:6px">Se non hai un profilo artista, crealo dalla pagina Artist Studio.</p></div>'; }
 }
 
 // ==================== MODAL ====================

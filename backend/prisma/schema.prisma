@@ -42,6 +42,14 @@ model User {
   adminAccount    AdminAccount?
   notifications   Notification[]
 
+  // Musica — relazioni inverse
+  ownedArtists    Artist[]        @relation("ArtistOwner")
+  artistMemberships ArtistMember[]
+  playlists       Playlist[]
+  follows         Follow[]
+  listeningEvents ListeningEvent[]
+  credits         Credit[]
+
   @@index([accountType], map: "users_account_type_idx")
   @@index([status], map: "users_status_idx")
   @@map("users")
@@ -88,6 +96,7 @@ model Role {
 
   permissions  RolePermission[]
   userRoles    UserRole[]
+  artistMembers ArtistMember[]
 
   @@map("roles")
 }
@@ -140,6 +149,9 @@ model Organization {
   status           String   @default("active")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
+
+  artists      Artist[]
+  labelReleases Release[]
 
   @@index([ownerUserId], map: "organizations_owner_idx")
   @@map("organizations")
@@ -206,3 +218,211 @@ model SystemSetting {
 
   @@map("system_settings")
 }
+
+// ==================== MUSICA — Catalogo ====================
+
+model Artist {
+  id                 String   @id @default(uuid()) @db.Uuid
+  ownerUserId        String?  @map("owner_user_id") @db.Uuid
+  organizationId     String?  @map("organization_id") @db.Uuid
+  artistName         String   @map("artist_name")
+  slug               String   @unique
+  biography          String?
+  imageUrl           String?  @map("image_url")
+  verificationStatus String   @default("unverified") @map("verification_status")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  ownerUser      User?           @relation("ArtistOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  releases       Release[]
+  members        ArtistMember[]
+  follows        Follow[]
+
+  @@index([ownerUserId], map: "artists_owner_idx")
+  @@index([organizationId], map: "artists_org_idx")
+  @@map("artists")
+}
+
+model ArtistMember {
+  id        String @id @default(uuid()) @db.Uuid
+  artistId  String @map("artist_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  roleId    String? @map("role_id") @db.Uuid
+
+  artist    Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role?  @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@unique([artistId, userId])
+  @@map("artist_members")
+}
+
+model Release {
+  id           String    @id @default(uuid()) @db.Uuid
+  artistId     String    @map("artist_id") @db.Uuid
+  title        String
+  releaseType  String    @map("release_type") // single | ep | album
+  status       String    @default("draft")    // draft | in_preparation | in_review | approved | published | suspended | withdrawn
+  releaseDate  DateTime? @map("release_date") @db.Date
+  upc          String?
+  labelId      String?   @map("label_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  artist    Artist          @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  label     Organization?  @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  tracks    Track[]
+
+  @@index([artistId], map: "releases_artist_idx")
+  @@index([status], map: "releases_status_idx")
+  @@map("releases")
+}
+
+model Track {
+  id         String   @id @default(uuid()) @db.Uuid
+  releaseId  String   @map("release_id") @db.Uuid
+  title      String
+  version    String?
+  duration   Int?
+  isrc       String?
+  explicit   Boolean  @default(false)
+  status     String   @default("draft") // draft | in_review | approved | published | suspended | withdrawn
+  position   Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  release       Release         @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  assets        TrackAsset[]
+  credits       Credit[]
+  trackGenres   TrackGenre[]    @relation("TrackGenres")
+  listening     ListeningEvent[]
+  playlistItems PlaylistTrack[]
+
+  @@index([releaseId], map: "tracks_release_idx")
+  @@map("tracks")
+}
+
+model TrackAsset {
+  id               String   @id @default(uuid()) @db.Uuid
+  trackId           String   @map("track_id") @db.Uuid
+  assetType         String   @map("asset_type") // original | master | preview | waveform
+  storageKey        String   @map("storage_key")
+  format            String?
+  checksum          String?
+  processingStatus String   @default("pending") @map("processing_status")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@index([trackId], map: "track_assets_track_idx")
+  @@map("track_assets")
+}
+
+model Credit {
+  id              String   @id @default(uuid()) @db.Uuid
+  trackId          String   @map("track_id") @db.Uuid
+  contributorName  String   @map("contributor_name")
+  contributorRole String   @map("contributor_role")
+  contributorId    String?  @map("contributor_id") @db.Uuid
+  percentage       Decimal? @db.Decimal(5, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user   User? @relation(fields: [contributorId], references: [id], onDelete: SetNull)
+
+  @@index([trackId], map: "credits_track_idx")
+  @@map("credits")
+}
+
+model Genre {
+  id       String   @id @default(uuid()) @db.Uuid
+  name     String   @unique
+  parentId String?  @map("parent_id") @db.Uuid
+  parent   Genre?  @relation("GenreTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Genre[] @relation("GenreTree")
+  trackGenres TrackGenre[] @relation("TrackGenres")
+
+  @@map("genres")
+}
+
+// Tabella di join Track ↔ Genre (molti-a-molti)
+model TrackGenre {
+  trackId String @map("track_id") @db.Uuid
+  genreId String @map("genre_id") @db.Uuid
+  track   Track  @relation("TrackGenres", fields: [trackId], references: [id], onDelete: Cascade)
+  genre   Genre  @relation("TrackGenres", fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, genreId])
+  @@map("track_genres")
+}
+
+model Playlist {
+  id           String    @id @default(uuid()) @db.Uuid
+  ownerUserId  String?   @map("owner_user_id") @db.Uuid
+  title        String
+  visibility   String    @default("private") // private | public | collaborative
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  owner  User?           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  items  PlaylistTrack[]
+
+  @@map("playlists")
+}
+
+model PlaylistTrack {
+  playlistId String   @map("playlist_id") @db.Uuid
+  trackId    String   @map("track_id") @db.Uuid
+  position   Int
+  addedAt    DateTime @default(now()) @map("added_at")
+
+  playlist  Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, trackId])
+  @@map("playlist_tracks")
+}
+
+model Follow {
+  followerUserId String   @map("follower_user_id") @db.Uuid
+  artistId       String   @map("artist_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  follower User   @relation(fields: [followerUserId], references: [id], onDelete: Cascade)
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@id([followerUserId, artistId])
+  @@index([artistId], map: "follows_artist_idx")
+  @@map("follows")
+}
+
+model ListeningEvent {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String?    @map("user_id") @db.Uuid
+  trackId           String     @map("track_id") @db.Uuid
+  startedAt         DateTime   @map("started_at")
+  endedAt           DateTime?  @map("ended_at")
+  qualifiedDuration Int?       @map("qualified_duration")
+  source            String?
+  eventType         String?    @map("event_type") // play | complete | skip
+  createdAt         DateTime   @default(now()) @map("created_at")
+
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@index([trackId], map: "listening_events_track_idx")
+  @@index([trackId, userId], map: "listening_events_user_idx")
+  @@map("listening_events")
+}
+
+model PlaybackSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String?   @map("user_id") @db.Uuid
+  startedAt  DateTime  @map("started_at")
+  endedAt    DateTime? @map("ended_at")
+  deviceType String?   @map("device_type")
+
+  @@map("playback_sessions")
+}
+
+// Aggiungo relazioni inverse ai modelli User, Organization, Role
