@@ -10,15 +10,6 @@
         "installCommand": "cd ../../ && npm ci --include=optional --no-audit --no-fund",
         "buildCommand": "cd ../../ && npx prisma generate --schema=backend/prisma/schema.prisma"
       }
-    },
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "installCommand": "npm ci --no-audit --no-fund",
-        "buildCommand": "npm run build",
-        "outputDirectory": ".next"
-      }
     }
   ],
   "routes": [
@@ -30,6 +21,6 @@
     { "src": "/audit(.*)", "dest": "/backend/src/api/index.ts" },
     { "src": "/admin/(.*)", "dest": "/backend/src/api/index.ts" },
     { "src": "/health", "dest": "/backend/src/api/index.ts" },
-    { "src": "/(.*)", "dest": "/frontend/$1" }
+    { "src": "/(.*)", "dest": "/backend/src/api/index.ts" }
   ]
 }
