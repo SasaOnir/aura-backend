@@ -7,6 +7,7 @@ import { RolesModule } from './roles/roles.module';
 import { StaffModule } from './staff/staff.module';
 import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
+import { WebModule } from './web/web.module';
 import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
 
 @Module({
@@ -19,6 +20,7 @@ import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
     StaffModule,
     AuditModule,
     AdminModule,
+    WebModule,
   ],
   providers: [SuperAdminBootstrap],
 })
