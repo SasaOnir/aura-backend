@@ -50,7 +50,21 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
 
-  app.use(helmet());
+  // Helmet con CSP permissiva: la home page HTML usa script inline (single-page),
+  // quindi permettiamo 'unsafe-inline' su script-src. img-src/style-src ampi per
+  // eventuali avatar/risorse esterne. connect-src punta allo stesso dominio.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+      },
+    },
+  }));
   app.use(cookieParser());
 
   const corsOrigin = process.env.CORS_ORIGIN || 'https://aura-backend-rouge.vercel.app';
