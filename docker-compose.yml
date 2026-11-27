@@ -99,13 +99,19 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # URL pubblico del backend visto dal BROWSER (incorporato nel bundle e nella CSP)
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
     container_name: aura_frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
+      # Rete interna: il BFF del frontend parla col backend senza passare da Internet
+      BACKEND_URL: http://backend:4000
+      # Origine pubblica del sito: il BFF accetta POST di autenticazione solo da qui (anti-CSRF)
+      APP_ORIGIN: ${APP_ORIGIN:?imposta APP_ORIGIN in .env (es. https://aura.example.org)}
     ports:
       - "127.0.0.1:3000:3000"
 

@@ -79,4 +79,33 @@ describe('AuthService', () => {
     const { svc } = await setup();
     await expect(svc.register({ email: 'n@b.it', password: 'password123', displayName: 'Nuovo', accountType: 'artist' })).rejects.toThrow();
   });
+
+  it('logout: revoca il refresh token anche senza access token; poi il refresh fallisce', async () => {
+    const { svc, tokens } = await setup();
+    const first = await svc.login({ email: 'a@b.it', password: 'Corretta-Password-9!' });
+    await expect(svc.logout(first.refreshToken)).resolves.toEqual({ ok: true });
+    expect(tokens[0].revokedAt).not.toBeNull();
+    await expect(svc.refresh(first.refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('logout: token sconosciuto -> stessa risposta (nessuna informazione)', async () => {
+    const { svc } = await setup();
+    await expect(svc.logout('x'.repeat(40))).resolves.toEqual({ ok: true });
+  });
+
+  it('me: ritorna utente e permessi ordinati; account sospeso -> 401', async () => {
+    const f = await setup();
+    const svc = new AuthService(f.db, jwt, cfg, { getPermissions: async () => new Set(['users.read', 'audit.read']) } as any);
+    const r = await svc.me('u1');
+    expect(r.permissions).toEqual(['audit.read', 'users.read']);
+    expect((r.user as any).passwordHash).toBeUndefined();
+    f.user.status = 'suspended';
+    await expect(svc.me('u1')).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('login: espone la durata dell\'access token', async () => {
+    const { svc } = await setup();
+    const r = await svc.login({ email: 'a@b.it', password: 'Corretta-Password-9!' });
+    expect(r.accessTokenExpiresIn).toBe(900);
+  });
 });

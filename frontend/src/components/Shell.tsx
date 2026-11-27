@@ -1,37 +1,31 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 
 const NAV = [
-  { href: '/', label: 'Dashboard', icon: '📊', perm: null },
+  { href: '/', label: 'Dashboard', icon: '📊', perm: 'analytics.global' },
   { href: '/users', label: 'Utenti', icon: '👤', perm: 'users.read' },
-  { href: '/staff', label: 'Collaboratori', icon: '🛡️', perm: 'staff' },
+  { href: '/staff', label: 'Collaboratori', icon: '🛡️', perm: 'users.read' },
   { href: '/roles', label: 'Ruoli & permessi', icon: '🔑', perm: 'roles.read' },
   { href: '/audit', label: 'Audit log', icon: '📜', perm: 'audit.read' },
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, can } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [perms, setPerms] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
+    if (loading) return;
+    if (!user) router.replace('/login');
+    // Il pannello admin è solo per lo staff: gli altri account vanno alla loro area.
+    else if (user.accountType !== 'staff') router.replace('/account');
   }, [user, loading, router]);
 
-  // Recupera permessi (una sola volta dopo login)
-  useEffect(() => {
-    if (!user) return;
-    // L'endpoint /users/:id ritorna anche i ruoli/permessi; in produzione ottimizzare.
-    // Per ora: il Super Admin vede tutto; altri vedono ciò che l'API permette.
-    setPerms(new Set()); // TODO: GET /auth/me → permissions
-  }, [user]);
-
   if (loading) return <div className="min-h-screen flex items-center justify-center text-aura-mute">Caricamento…</div>;
-  if (!user) return null;
+  if (!user || user.accountType !== 'staff') return null;
 
   return (
     <div className="min-h-screen flex">
@@ -46,7 +40,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {NAV.map((n) => {
+          {NAV.filter((n) => !n.perm || can(n.perm)).map((n) => {
             const active = pathname === n.href;
             return (
               <Link

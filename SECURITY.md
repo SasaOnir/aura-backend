@@ -15,6 +15,15 @@ rilevamento del riuso; rate limit globale e stretto su /auth; risposte di login 
 policy password; RBAC lato server con blocco dell'escalation di privilegi; IP client affidabile (trust proxy esplicito);
 audit log append-only a livello database; cancellazione GDPR che anonimizza e chiude le sessioni.
 
+## Frontend (Next.js)
+Sessione: access token (15 min) solo in memoria JS; refresh token in cookie `__Host-` httpOnly + Secure + SameSite=Strict
+gestito dal BFF (`/api/auth/*`): un XSS non può rubarlo. Refresh single-flight + Web Locks tra schede (il backend tratta il
+riuso di un refresh token come furto). POST di autenticazione accettati solo dalla stessa origine (anti-CSRF).
+CSP con nonce per richiesta (niente `unsafe-inline` sugli script), HSTS, frame-ancestors none, niente ottimizzatore immagini.
+Next.js 15.5.x: la linea 14.x non riceve più correzioni di sicurezza. Da pianificare il passaggio a Next 16.
+Requisito di deploy: davanti a Next deve esserci un proxy fidato che SOVRASCRIVE `X-Forwarded-For`, e `TRUST_PROXY` del backend
+deve corrispondere al numero di hop; imposta `APP_ORIGIN`.
+
 ## Ancora da fare prima di un lancio pubblico
 Verifica email e MFA (TOTP/passkey) obbligatoria per lo staff; frontend collegato al backend (oggi `index.html` è un
 prototipo con auth locale); upload audio con scansione e URL firmati; WAF/CDN; backup testati; penetration test;

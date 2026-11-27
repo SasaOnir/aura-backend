@@ -164,20 +164,37 @@ export class AuthService implements OnModuleInit {
   }
 
   // ─── Logout ────────────────────────────────────────────────────────────
-  async logout(userId: string, refreshToken?: string) {
-    if (refreshToken) {
-      // Vincolato all'utente autenticato: non si possono revocare i token altrui.
-      await this.prisma.refreshToken.updateMany({
-        where: { tokenHash: this.hashToken(refreshToken), userId, revokedAt: null },
-        data: { revokedAt: new Date() },
+  /**
+   * Revoca il refresh token presentato. Funziona anche con access token scaduto
+   * (il refresh token è già la credenziale): altrimenti, dopo 15 minuti, "Esci"
+   * lascerebbe la sessione valida sul server.
+   */
+  async logout(refreshToken: string) {
+    const record = await this.prisma.refreshToken.findUnique({ where: { tokenHash: this.hashToken(refreshToken) } });
+    if (record && !record.revokedAt) {
+      await this.prisma.refreshToken.updateMany({ where: { id: record.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      await this.prisma.auditLog.create({
+        data: { actorId: record.userId, action: 'auth.logout', resourceType: 'user', resourceId: record.userId, result: 'success' },
       });
-    } else {
-      await this.prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
     }
+    return { ok: true }; // stessa risposta anche se il token non esiste: nessuna informazione
+  }
+
+  /** Chiude TUTTE le sessioni dell'utente autenticato (es. "esci da tutti i dispositivi"). */
+  async logoutAll(userId: string) {
+    await this.prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
     await this.prisma.auditLog.create({
-      data: { actorId: userId, action: 'auth.logout', resourceType: 'user', resourceId: userId, result: 'success' },
+      data: { actorId: userId, action: 'auth.logout_all', resourceType: 'user', resourceId: userId, result: 'success' },
     });
     return { ok: true };
+  }
+
+  /** Profilo + permessi effettivi dell'utente autenticato (per la UI; l'enforcement resta server-side). */
+  async me(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.status !== 'active') throw new UnauthorizedException();
+    const perms = await this.permissions.getPermissions(userId);
+    return { user: this.publicUser(user), permissions: [...perms].sort() };
   }
 
   // ─── Emissione token ───────────────────────────────────────────────────
@@ -208,7 +225,7 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    return { accessToken, refreshToken, refreshTokenExpiresAt: record.expiresAt.toISOString(), refreshId: record.id };
+    return { accessToken, accessTokenExpiresIn: accessTtl, refreshToken, refreshTokenExpiresAt: record.expiresAt.toISOString(), refreshId: record.id };
   }
 
   private hashToken(t: string): string {

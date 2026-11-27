@@ -35,7 +35,7 @@ async function bootstrap() {
   const corsOrigin = config.get<string>('CORS_ORIGIN') || 'http://localhost:3000';
   app.enableCors({
     origin: corsOrigin.split(',').map((o) => o.trim()),
-    credentials: true,
+    credentials: false, // l'API usa Authorization: Bearer; il cookie del refresh token vive solo sul BFF
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     maxAge: 600,
   });

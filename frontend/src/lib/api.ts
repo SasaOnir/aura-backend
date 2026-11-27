@@ -1,48 +1,63 @@
 // Client API tipizzato per il backend NestJS di Aura.
-// Salva access+refresh in memoria + localStorage (per dev). In produzione:
-// httpOnly cookie settati dal backend (vedi auth.controller - da migrare).
+//
+// Modello di sessione:
+//  - access token (15 min): SOLO in memoria JS. Mai in localStorage/sessionStorage.
+//  - refresh token (30 gg): cookie httpOnly + Secure + SameSite=Strict, gestito dal BFF
+//    (/api/auth/*, stesso sito). Il JavaScript della pagina non può leggerlo: un XSS non può rubarlo.
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+export interface SessionUser {
+  id: string;
+  email: string;
+  displayName: string;
+  accountType: string;
+  status: string;
+  emailVerified?: boolean;
+  mfaEnabled: boolean;
+}
+export interface Session { user: SessionUser; accessToken: string; accessTokenExpiresIn: number }
+
 let accessToken: string | null = null;
-const REFRESH_KEY = 'aura_refresh_token';
+export const getAccessToken = () => accessToken;
+export function clearSession() { accessToken = null; }
 
-export function setTokens(access: string, refresh: string) {
-  accessToken = access;
-  if (typeof window !== 'undefined') localStorage.setItem(REFRESH_KEY, refresh);
-}
-export function clearTokens() {
-  accessToken = null;
-  if (typeof window !== 'undefined') localStorage.removeItem(REFRESH_KEY);
-}
-export function getAccessToken() {
-  return accessToken;
+async function bff<T = any>(path: string, body: unknown = {}): Promise<{ ok: boolean; status: number; data: T }> {
+  const r = await fetch(path, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, data: data as T };
 }
 
-async function refreshAccessToken(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
-  if (!refreshToken) return false;
-  try {
-    const r = await fetch(`${API}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!r.ok) return false;
-    const data = await r.json();
-    setTokens(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    return false;
+// ── Refresh: UNA sola richiesta alla volta ───────────────────────────────
+// Il backend ruota il refresh token a ogni uso e tratta il riuso di un token vecchio
+// come furto (chiude tutte le sessioni). Due refresh paralleli nella stessa scheda o in
+// schede diverse causerebbero un falso allarme: quindi single-flight + Web Locks tra schede.
+let inflight: Promise<Session | null> | null = null;
+
+async function doRefresh(): Promise<Session | null> {
+  const r = await bff<Session>('/api/auth/refresh');
+  if (!r.ok) { accessToken = null; return null; }
+  accessToken = r.data.accessToken;
+  return r.data;
+}
+
+export function refreshSession(): Promise<Session | null> {
+  if (!inflight) {
+    const run = () => doRefresh();
+    const locked = typeof navigator !== 'undefined' && 'locks' in navigator
+      ? (navigator as any).locks.request('aura-refresh', run) as Promise<Session | null>
+      : run();
+    inflight = locked.finally(() => { inflight = null; });
   }
+  return inflight;
 }
 
-export async function api<T = any>(
-  path: string,
-  opts: RequestInit = {},
-  retry = true,
-): Promise<T> {
+export async function api<T = any>(path: string, opts: RequestInit = {}, retry = true): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(opts.headers as Record<string, string> | undefined),
@@ -51,31 +66,43 @@ export async function api<T = any>(
 
   const r = await fetch(`${API}${path}`, { ...opts, headers });
 
-  if (r.status === 401 && retry && accessToken) {
-    // Try refresh once
-    const ok = await refreshAccessToken();
-    if (ok) return api<T>(path, opts, false);
-    clearTokens();
+  if (r.status === 401 && retry) {
+    const s = await refreshSession();
+    if (s) return api<T>(path, opts, false);
+    accessToken = null;
     if (typeof window !== 'undefined') window.location.href = '/login';
     throw new Error('Sessione scaduta');
   }
 
   if (!r.ok) {
-    let msg = `HTTP ${r.status}`;
+    let msg: any = `HTTP ${r.status}`;
     try { const e = await r.json(); msg = e.message || msg; } catch {}
-    throw new Error(Array.isArray(msg) ? msg.join(', ') : msg);
+    throw new Error(Array.isArray(msg) ? msg.join(', ') : String(msg));
   }
   return r.json();
 }
 
-export const apiLogin = (email: string, password: string) =>
-  api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+// ── Auth (passa dal BFF: imposta/rimuove il cookie del refresh token) ─────
+export async function apiLogin(email: string, password: string): Promise<Session> {
+  const r = await bff<any>('/api/auth/login', { email, password });
+  if (!r.ok) throw new Error(r.data?.message || 'Accesso non riuscito.');
+  accessToken = r.data.accessToken;
+  return r.data;
+}
 
-export const apiRegister = (email: string, password: string, displayName: string, accountType: 'listener'|'artist'|'label') =>
-  api('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, displayName, accountType }) });
+export async function apiRegister(email: string, password: string, displayName: string, accountType: 'listener' | 'artist' | 'label'): Promise<Session> {
+  const r = await bff<any>('/api/auth/register', { email, password, displayName, accountType });
+  if (!r.ok) throw new Error(r.data?.message || 'Registrazione non riuscita.');
+  accessToken = r.data.accessToken;
+  return r.data;
+}
 
-export const apiLogout = () =>
-  api('/auth/logout', { method: 'POST', body: JSON.stringify({}) });
+export async function apiLogout(): Promise<void> {
+  try { await bff('/api/auth/logout'); } finally { accessToken = null; }
+}
+
+export const apiMe = () => api<{ user: SessionUser; permissions: string[] }>('/auth/me');
+export const apiLogoutAll = () => api('/auth/logout-all', { method: 'POST', body: '{}' });
 
 // Admin
 export const apiDashboard = () => api('/admin/dashboard');
