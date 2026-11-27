@@ -6,6 +6,10 @@ const good = {
   JWT_ACCESS_SECRET: 'A'.repeat(30) + 'b'.repeat(30),
   JWT_REFRESH_SECRET: 'C'.repeat(30) + 'd'.repeat(30),
   CORS_ORIGIN: 'https://aura.example.org',
+  MFA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+  RESEND_API_KEY: 're_realkey_for_test',
+  MAIL_FROM: 'Aura <noreply@aura-music.it>',
+  APP_ORIGIN: 'https://aura-music.it',
 };
 
 describe('validateEnv', () => {
@@ -29,5 +33,15 @@ describe('validateEnv', () => {
   });
   it('in sviluppo richiede comunque i segreti', () => {
     expect(() => validateEnv({ NODE_ENV: 'development' })).toThrow(/obbligatoria/);
+  });
+  it('MFA_ENCRYPTION_KEY: obbligatoria e lunga 32 byte', () => {
+    const { MFA_ENCRYPTION_KEY, ...rest } = good;
+    expect(() => validateEnv(rest)).toThrow(/MFA_ENCRYPTION_KEY/);
+    expect(() => validateEnv({ ...good, MFA_ENCRYPTION_KEY: Buffer.from('corta').toString('base64') })).toThrow(/32 byte/);
+  });
+  it('produzione: richiede Resend, mittente su dominio verificato e APP_ORIGIN https', () => {
+    expect(() => validateEnv({ ...good, RESEND_API_KEY: '' })).toThrow(/RESEND_API_KEY/);
+    expect(() => validateEnv({ ...good, MAIL_FROM: 'Aura <onboarding@resend.dev>' })).toThrow(/MAIL_FROM/);
+    expect(() => validateEnv({ ...good, APP_ORIGIN: 'http://aura-music.it' })).toThrow(/APP_ORIGIN/);
   });
 });

@@ -47,8 +47,9 @@ export function clearRefreshCookie(res: NextResponse) {
  * Funziona solo se davanti a Next c'è un proxy fidato che SOVRASCRIVE X-Forwarded-For
  * (Cloudflare, Render, Vercel...) e se TRUST_PROXY del backend è pari al numero di hop.
  */
-export async function callBackend(path: string, req: NextRequest, body: unknown): Promise<{ status: number; data: any }> {
+export async function callBackend(path: string, req: NextRequest, body: unknown, authorization?: string | null): Promise<{ status: number; data: any }> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authorization && /^Bearer [\w.\-]+$/.test(authorization)) headers['Authorization'] = authorization;
   const xff = req.headers.get('x-forwarded-for');
   if (xff) headers['X-Forwarded-For'] = xff;
   const ua = req.headers.get('user-agent');
@@ -74,7 +75,9 @@ export function errorResponse(status: number, data: any): NextResponse {
   if (status >= 500) return json({ message: 'Servizio temporaneamente non disponibile.' }, 502);
   const m = data?.message;
   const message = Array.isArray(m) ? m.join(' ') : typeof m === 'string' ? m : 'Richiesta non valida.';
-  return json({ message: message.slice(0, 300) }, status);
+  // Solo codici noti: la UI reagisce a EMAIL_NOT_VERIFIED, ma non inoltriamo campi arbitrari.
+  const code = data?.code === 'EMAIL_NOT_VERIFIED' ? data.code : undefined;
+  return json({ message: message.slice(0, 300), ...(code ? { code } : {}) }, status);
 }
 
 /** Risposta di login/registrazione/refresh: access token nel body, refresh token SOLO nel cookie. */
@@ -92,4 +95,22 @@ export async function readJson(req: NextRequest): Promise<Record<string, unknown
   } catch {
     return null;
   }
+}
+
+/** Login: sessione completa, oppure uno dei passi MFA (nessun cookie finché il secondo fattore non è superato). */
+export function loginResponse(status: number, data: any): NextResponse {
+  if (status >= 200 && status < 300) {
+    if (data?.mfaRequired && typeof data.mfaToken === 'string') return json({ mfaRequired: true, mfaToken: data.mfaToken });
+    if (data?.mfaEnrollmentRequired && typeof data.enrollToken === 'string') return json({ mfaEnrollmentRequired: true, enrollToken: data.enrollToken });
+  }
+  return sessionResponse(status, data);
+}
+
+/** Risposte semplici dal backend (ok/message/secret/otpauthUri/recoveryCodes): inoltrate solo se 2xx. */
+export function passthrough(status: number, data: any): NextResponse {
+  if (status < 200 || status >= 300) return errorResponse(status, data);
+  const { refreshToken, refreshTokenExpiresAt, ...safe } = data ?? {};
+  const res = json(safe, 200);
+  if (typeof refreshToken === 'string') setRefreshCookie(res, refreshToken, refreshTokenExpiresAt); // es. attivazione MFA dello staff: completa il login
+  return res;
 }

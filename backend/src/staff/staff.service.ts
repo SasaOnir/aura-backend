@@ -1,12 +1,23 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../auth/permissions.service';
+import { EmailTokenService } from '../auth/email-token.service';
+import { MfaService } from '../auth/mfa.service';
+import { MailService, escapeHtml } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class StaffService {
   private readonly logger = new Logger('StaffService');
-  constructor(private readonly prisma: PrismaService, private readonly permissions: PermissionsService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissions: PermissionsService,
+    private readonly emailTokens: EmailTokenService,
+    private readonly mfa: MfaService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
+  ) {}
 
   async listStaff() {
     return this.prisma.adminAccount.findMany({
@@ -40,29 +51,39 @@ export class StaffService {
 
     for (const r of roles) await this.permissions.assertCanGrantRole(actorId, r.id);
 
-    // Crea l'utente staff in stato 'pending_verification' (in prod: invia email con link
-    // di setup password. Qui: crea con password random che l'operatore comunica).
-    return this.prisma.$transaction(async (tx) => {
+    // Crea l'utente staff 'pending_verification' SENZA password: la imposta lui dal link ricevuto via email
+    // (72 ore, monouso). Al primo accesso dovrà configurare l'MFA, obbligatoria per lo staff.
+    const created = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: {
-          email,
-          displayName: data.displayName,
-          accountType: 'staff',
-          status: 'pending_verification',
-          emailVerified: false,
-          // passwordHash null → l'utente la imposta al primo accesso
-        },
+        data: { email, displayName: data.displayName, accountType: 'staff', status: 'pending_verification', emailVerified: false },
       });
       await tx.userProfile.create({ data: { userId: user.id, language: 'it' } });
       await tx.adminAccount.create({ data: { userId: user.id, status: 'active', mfaRequired: true } });
-
       for (const r of roles) {
-        await tx.userRole.create({ data: { userId: user.id, roleId: r.id } });
+        await tx.userRole.create({ data: { userId: user.id, roleId: r.id, grantedBy: actorId } });
       }
       return user;
     });
+
+    const token = await this.emailTokens.create(created.id, 'staff_invite');
+    const origin = (this.config.get<string>('APP_ORIGIN') || 'http://localhost:3000').replace(/\/$/, '');
+    const link = `${origin}/set-password#token=${token}`;
+    this.mail.sendSafe({
+      to: created.email,
+      subject: 'Aura — sei stato invitato come collaboratore',
+      text: `Ciao ${created.displayName},\n\nsei stato invitato nel team di Aura. Imposta la tua password (il link vale 72 ore):\n${link}\n\nAl primo accesso dovrai configurare l'app di autenticazione (MFA).`,
+      html: `<p>Ciao ${escapeHtml(created.displayName)},</p><p>sei stato invitato nel team di Aura. Imposta la tua password (il link vale 72 ore):</p><p><a href="${escapeHtml(link)}">Imposta password</a></p><p>Al primo accesso dovrai configurare l'app di autenticazione (MFA).</p>`,
+    });
+    return { id: created.id, email: created.email, displayName: created.displayName, status: created.status };
   }
 
+  /** Dispositivo MFA perso e codici di recupero finiti: solo il Super Admin può azzerare l'MFA (l'utente la riconfigura al prossimo accesso). */
+  async resetMfa(userId: string, actorId: string) {
+    if (!(await this.permissions.isSuperAdmin(actorId))) throw new ForbiddenException('Solo il Super Admin può resettare l\'MFA.');
+    if (userId === actorId) throw new ForbiddenException('Non puoi resettare la tua stessa MFA.');
+    await this.mfa.resetMfa(userId);
+    return { ok: true };
+  }
   async assignRole(userId: string, roleName: string, actorId: string, reason?: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Utente non trovato.');

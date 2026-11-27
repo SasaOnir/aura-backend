@@ -21,6 +21,13 @@ export function validateEnv(env: Record<string, unknown>): Record<string, unknow
   need('DATABASE_URL');
   need('JWT_ACCESS_SECRET');
   need('JWT_REFRESH_SECRET');
+  need('MFA_ENCRYPTION_KEY');
+
+  // La chiave che cifra i segreti TOTP a riposo: 32 byte in base64. Sempre obbligatoria, anche in sviluppo
+  // (una chiave assente significherebbe segreti MFA in chiaro nel database).
+  if (e.MFA_ENCRYPTION_KEY && Buffer.from(e.MFA_ENCRYPTION_KEY, 'base64').length !== 32) {
+    errors.push('MFA_ENCRYPTION_KEY deve essere 32 byte in base64 (openssl rand -base64 32).');
+  }
 
   if (e.JWT_ACCESS_SECRET && e.JWT_REFRESH_SECRET && e.JWT_ACCESS_SECRET === e.JWT_REFRESH_SECRET) {
     errors.push('JWT_ACCESS_SECRET e JWT_REFRESH_SECRET devono essere diversi.');
@@ -34,6 +41,12 @@ export function validateEnv(env: Record<string, unknown>): Record<string, unknow
     }
     const cors = e.CORS_ORIGIN || '';
     if (!cors || /localhost|127\.0\.0\.1/.test(cors)) errors.push('CORS_ORIGIN: in produzione deve essere il dominio reale (https).');
+    if (e.MFA_ENCRYPTION_KEY && looksLikePlaceholder(e.MFA_ENCRYPTION_KEY)) errors.push('MFA_ENCRYPTION_KEY: valore di esempio non ammesso in produzione.');
+    if (!e.RESEND_API_KEY) errors.push('RESEND_API_KEY è obbligatoria in produzione (verifica email, reset password, inviti).');
+    if (!e.MAIL_FROM || !/^.+<[^@\s]+@[^@\s]+>$|^[^@\s]+@[^@\s]+$/.test(e.MAIL_FROM) || /resend\.dev/.test(e.MAIL_FROM)) {
+      errors.push('MAIL_FROM: serve un mittente su un dominio verificato su Resend (non resend.dev).');
+    }
+    if (!e.APP_ORIGIN || !/^https:\/\//.test(e.APP_ORIGIN)) errors.push('APP_ORIGIN: in produzione deve essere l\'URL https del sito (usato nei link delle email).');
     if (e.DATABASE_URL && looksLikePlaceholder(e.DATABASE_URL)) errors.push('DATABASE_URL contiene una password di esempio.');
     if (e.AURA_SUPERADMIN_PASSWORD) {
       if (e.AURA_SUPERADMIN_PASSWORD.length < 16 || looksLikePlaceholder(e.AURA_SUPERADMIN_PASSWORD)) {

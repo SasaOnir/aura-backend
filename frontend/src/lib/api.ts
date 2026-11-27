@@ -22,11 +22,11 @@ let accessToken: string | null = null;
 export const getAccessToken = () => accessToken;
 export function clearSession() { accessToken = null; }
 
-async function bff<T = any>(path: string, body: unknown = {}): Promise<{ ok: boolean; status: number; data: T }> {
+async function bff<T = any>(path: string, body: unknown = {}, extraHeaders: Record<string, string> = {}): Promise<{ ok: boolean; status: number; data: T }> {
   const r = await fetch(path, {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
@@ -83,18 +83,62 @@ export async function api<T = any>(path: string, opts: RequestInit = {}, retry =
 }
 
 // ── Auth (passa dal BFF: imposta/rimuove il cookie del refresh token) ─────
-export async function apiLogin(email: string, password: string): Promise<Session> {
+export type LoginOutcome =
+  | { kind: 'session'; session: Session }
+  | { kind: 'mfa'; mfaToken: string }
+  | { kind: 'enroll'; enrollToken: string };
+
+export class ApiError extends Error {
+  constructor(message: string, public code?: string, public status?: number) { super(message); }
+}
+
+export async function apiLogin(email: string, password: string): Promise<LoginOutcome> {
   const r = await bff<any>('/api/auth/login', { email, password });
-  if (!r.ok) throw new Error(r.data?.message || 'Accesso non riuscito.');
+  if (!r.ok) throw new ApiError(r.data?.message || 'Accesso non riuscito.', r.data?.code, r.status);
+  if (r.data.mfaRequired) return { kind: 'mfa', mfaToken: r.data.mfaToken };
+  if (r.data.mfaEnrollmentRequired) return { kind: 'enroll', enrollToken: r.data.enrollToken };
+  accessToken = r.data.accessToken;
+  return { kind: 'session', session: r.data };
+}
+
+export async function apiMfaVerify(mfaToken: string, input: { code?: string; recoveryCode?: string }): Promise<Session> {
+  const r = await bff<any>('/api/auth/mfa/verify', { mfaToken, ...input });
+  if (!r.ok) throw new ApiError(r.data?.message || 'Codice non valido.', r.data?.code, r.status);
   accessToken = r.data.accessToken;
   return r.data;
 }
 
-export async function apiRegister(email: string, password: string, displayName: string, accountType: 'listener' | 'artist' | 'label'): Promise<Session> {
+/** Chiamate MFA autenticate: con `token` (enrollment staff) oppure con l'access token in memoria. */
+async function bffAuth<T = any>(path: string, body: unknown, token?: string): Promise<T> {
+  const call = () => bff<any>(path, body, { Authorization: `Bearer ${token ?? accessToken ?? ''}` });
+  let r = await call();
+  if (r.status === 401 && !token && (await refreshSession())) r = await call(); // access token scaduto
+  if (!r.ok) throw new ApiError(r.data?.message || 'Operazione non riuscita.', r.data?.code, r.status);
+  return r.data as T;
+}
+
+export const apiMfaSetup = (token?: string) => bffAuth<{ secret: string; otpauthUri: string }>('/api/auth/mfa/setup', {}, token);
+
+/** Con il token di enrollment la conferma completa anche il login (cookie impostato dal BFF). */
+export async function apiMfaEnable(code: string, token?: string): Promise<{ recoveryCodes: string[]; session?: Session }> {
+  const d = await bffAuth<any>('/api/auth/mfa/enable', { code }, token);
+  if (d.accessToken) { accessToken = d.accessToken; return { recoveryCodes: d.recoveryCodes, session: d }; }
+  return { recoveryCodes: d.recoveryCodes };
+}
+
+export const apiMfaDisable = (password: string, code: string) => bffAuth('/api/auth/mfa/disable', { password, code });
+
+export async function apiRegister(email: string, password: string, displayName: string, accountType: 'listener' | 'artist' | 'label'): Promise<string> {
   const r = await bff<any>('/api/auth/register', { email, password, displayName, accountType });
-  if (!r.ok) throw new Error(r.data?.message || 'Registrazione non riuscita.');
-  accessToken = r.data.accessToken;
-  return r.data;
+  if (!r.ok) throw new ApiError(r.data?.message || 'Registrazione non riuscita.', r.data?.code, r.status);
+  return r.data.message as string;
+}
+
+/** Endpoint pubblici senza sessione (verifica email, password dimenticata, imposta password). */
+export async function apiPublic(action: 'verify-email' | 'resend-verification' | 'forgot-password' | 'set-password', body: Record<string, string>): Promise<string | undefined> {
+  const r = await bff<any>(`/api/auth/public/${action}`, body);
+  if (!r.ok) throw new ApiError(r.data?.message || 'Operazione non riuscita.', r.data?.code, r.status);
+  return r.data?.message as string | undefined;
 }
 
 export async function apiLogout(): Promise<void> {

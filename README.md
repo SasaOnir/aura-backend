@@ -45,6 +45,7 @@ cd aura-backend
 # 2. Crea .env (copia il template e personalizza i secret)
 #    Il compose NON ha più valori di default per i segreti: se ne manca uno, si ferma.
 cp .env.example .env
+#    Genera i segreti: openssl rand -base64 64 (JWT, due diversi) e openssl rand -base64 32 (MFA_ENCRYPTION_KEY)
 # → cambia: JWT_ACCESS_SECRET, JWT_REFRESH_SECRET (openssl rand -base64 64)
 # → imposta: AURA_SUPERADMIN_EMAIL, AURA_SUPERADMIN_PASSWORD, AURA_SUPERADMIN_NAME
 

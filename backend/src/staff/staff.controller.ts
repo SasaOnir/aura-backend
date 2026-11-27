@@ -70,4 +70,11 @@ export class StaffController {
   revoke(@Param('userId', ParseUUIDPipe) userId: string, @Body() dto: ReasonDto, @Req() req: Request) {
     return this.staff.revoke(userId, (req as any).user.id, dto.reason);
   }
+
+  @Post(':userId/reset-mfa')
+  @RequirePermissions('staff.invite')
+  @Audit('staff.reset_mfa')
+  resetMfa(@Param('userId', ParseUUIDPipe) userId: string, @Req() req: Request) {
+    return this.staff.resetMfa(userId, (req as any).user.id);
+  }
 }

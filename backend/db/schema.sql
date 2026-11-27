@@ -40,12 +40,38 @@ CREATE TABLE users (
   email_verified  BOOLEAN NOT NULL DEFAULT FALSE,
   mfa_secret      TEXT,                        -- TOTP secret (encrypted a riposo)
   mfa_enabled     BOOLEAN NOT NULL DEFAULT FALSE,
+  mfa_failed_count INTEGER NOT NULL DEFAULT 0,   -- tentativi MFA errati consecutivi (lockout)
+  mfa_locked_until TIMESTAMPTZ,
+  mfa_last_step   BIGINT,                      -- ultimo intervallo TOTP accettato (anti-replay)
   last_login_at   TIMESTAMPTZ,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX users_account_type_idx ON users(account_type);
 CREATE INDEX users_status_idx ON users(status);
+
+-- Token monouso inviati via email. Nel DB c'è solo lo SHA-256: un dump del database non permette di usarli.
+CREATE TABLE email_tokens (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  purpose    TEXT NOT NULL CHECK (purpose IN ('verify_email','password_reset','staff_invite')),
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX email_tokens_user_purpose_idx ON email_tokens(user_id, purpose) WHERE used_at IS NULL;
+
+-- Codici di recupero MFA: monouso, solo hash.
+CREATE TABLE mfa_recovery_codes (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash  TEXT NOT NULL,
+  used_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, code_hash)
+);
+
 
 -- ── user_profiles ──────────────────────────────────────────────────────────
 CREATE TABLE user_profiles (

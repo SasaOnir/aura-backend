@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { callBackend, json, readJson, sameOrigin, sessionResponse } from '@/lib/bff';
+import { callBackend, json, passthrough, readJson, sameOrigin } from '@/lib/bff';
 
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return json({ message: 'Origine non consentita.' }, 403);
@@ -10,5 +10,5 @@ export async function POST(req: NextRequest) {
   const { status, data } = await callBackend('/auth/register', req, {
     email: b.email, password: b.password, displayName: b.displayName, accountType: b.accountType,
   });
-  return sessionResponse(status, data);
+  return passthrough(status, data);
 }

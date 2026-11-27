@@ -24,7 +24,20 @@ Next.js 15.5.x: la linea 14.x non riceve più correzioni di sicurezza. Da pianif
 Requisito di deploy: davanti a Next deve esserci un proxy fidato che SOVRASCRIVE `X-Forwarded-For`, e `TRUST_PROXY` del backend
 deve corrispondere al numero di hop; imposta `APP_ORIGIN`.
 
+## Verifica email, recupero password, MFA
+- Registrazione con risposta identica per email nuova ed esistente (anti-enumeration); l'account resta `pending_verification`
+  e non può accedere finché l'email non è verificata. Link nel *fragment* (`#token=`): non finisce in log né Referer.
+- Token email monouso, 256 bit, solo SHA-256 nel DB, scadenza (verifica 24 h, reset 1 h, invito staff 72 h); l'ultimo link invalida i precedenti.
+- Reset password: chiude tutte le sessioni e **non salta l'MFA**. Una password debole non brucia il link.
+- Invito staff: l'utente imposta la password dal link; al primo accesso deve configurare l'MFA (token a scopo limitato, nessun accesso prima).
+- MFA TOTP (RFC 6238, verificata con i vettori ufficiali): segreto cifrato a riposo AES-256-GCM legato all'utente
+  (`MFA_ENCRYPTION_KEY`), anti-replay (un codice vale una volta), lockout persistente dopo 5 errori (15 min, vale anche
+  contro attacchi da molti IP), 10 codici di recupero monouso (solo hash). Obbligatoria per lo staff; solo il Super Admin
+  può resettarla per un dispositivo perso.
+- **Conserva `MFA_ENCRYPTION_KEY` nel gestore segreti: se la perdi, nessun utente con MFA potrà più accedere.**
+- Le email partono da un dominio verificato su Resend (`MAIL_FROM`); in produzione `RESEND_API_KEY` è obbligatoria.
+
 ## Ancora da fare prima di un lancio pubblico
-Verifica email e MFA (TOTP/passkey) obbligatoria per lo staff; frontend collegato al backend (oggi `index.html` è un
-prototipo con auth locale); upload audio con scansione e URL firmati; WAF/CDN; backup testati; penetration test;
+Passkey/WebAuthn come alternativa al TOTP; pagina admin per gestire l'MFA dello staff; il vecchio `index.html` è un
+prototipo con auth locale (da dismettere); upload audio con scansione e URL firmati; WAF/CDN; backup testati; penetration test;
 DPIA, Termini/Privacy validati da un legale, etichettatura dei contenuti generati da AI (AI Act art. 50), procedura DSA di segnalazione e rimozione.

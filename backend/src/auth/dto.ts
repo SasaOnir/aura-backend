@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsIn, MaxLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsIn, MaxLength, IsOptional, Matches } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -42,4 +42,60 @@ export class LogoutDto {
   @IsString()
   @MaxLength(200)
   refreshToken?: string;
+}
+
+export class TokenDto {
+  @IsString()
+  @MinLength(20)
+  @MaxLength(200)
+  token: string;
+}
+
+export class EmailOnlyDto {
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
+}
+
+export class SetPasswordDto {
+  @IsString()
+  @MinLength(20)
+  @MaxLength(200)
+  token: string;
+
+  @IsString()
+  @MinLength(10)
+  @MaxLength(128)
+  password: string;
+}
+
+const CODE = /^\d{6}$/;
+const RECOVERY = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{8}$/;
+
+export class MfaVerifyDto {
+  @IsString()
+  @MaxLength(2000)
+  mfaToken: string;
+
+  @IsOptional()
+  @Matches(CODE, { message: 'Il codice ha 6 cifre.' })
+  code?: string;
+
+  @IsOptional()
+  @Matches(RECOVERY, { message: 'Codice di recupero non valido.' })
+  recoveryCode?: string;
+}
+
+export class MfaCodeDto {
+  @Matches(CODE, { message: 'Il codice ha 6 cifre.' })
+  code: string;
+}
+
+export class MfaDisableDto {
+  @IsString()
+  @MaxLength(128)
+  password: string;
+
+  @Matches(CODE, { message: 'Il codice ha 6 cifre.' })
+  code: string;
 }

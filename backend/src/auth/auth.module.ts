@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { PermissionsService } from './permissions.service';
+import { EmailTokenService } from './email-token.service';
+import { MfaService } from './mfa.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { PermissionsService } from './permissions.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PermissionsService],
-  exports: [AuthService, PermissionsService],
+  providers: [AuthService, JwtStrategy, PermissionsService, EmailTokenService, MfaService],
+  exports: [AuthService, PermissionsService, EmailTokenService, MfaService],
 })
 export class AuthModule {}

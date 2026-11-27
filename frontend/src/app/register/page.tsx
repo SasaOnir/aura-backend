@@ -1,8 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
+import { apiRegister } from '@/lib/api';
 
 type Kind = 'artist' | 'listener' | 'label';
 const KINDS: { v: Kind; label: string; hint: string }[] = [
@@ -12,8 +11,7 @@ const KINDS: { v: Kind; label: string; hint: string }[] = [
 ];
 
 export default function RegisterPage() {
-  const { register } = useAuth();
-  const router = useRouter();
+  const [done, setDone] = useState('');
   const [form, setForm] = useState({ email: '', password: '', displayName: '', accountType: 'artist' as Kind });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,14 +22,26 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await register(form.email, form.password, form.displayName, form.accountType);
-      router.push('/account');
+      setDone(await apiRegister(form.email, form.password, form.displayName, form.accountType));
     } catch (err: any) {
       setError(err.message || 'Registrazione non riuscita.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (done) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-md card text-center space-y-3">
+          <h1 className="text-xl font-bold text-aura-text">Controlla la tua email</h1>
+          <p className="text-aura-mute text-sm">{done}</p>
+          <p className="text-aura-dim text-xs">Controlla anche lo spam. Il link vale 24 ore.</p>
+          <Link href="/login" className="btn-ghost inline-block">Vai al login</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">

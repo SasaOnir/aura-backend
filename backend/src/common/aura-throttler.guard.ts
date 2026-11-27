@@ -12,7 +12,7 @@ export class AuraThrottlerGuard extends ThrottlerGuard {
   protected async getTracker(req: Record<string, any>): Promise<string> {
     const ip = req.ip || 'unknown';
     const path: string = req.originalUrl || req.url || '';
-    if (path.includes('/auth/login')) {
+    if (path.includes('/auth/login') || path.includes('/auth/resend-verification') || path.includes('/auth/forgot-password')) {
       const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase().slice(0, 254) : '';
       return `${ip}|${email}`;
     }

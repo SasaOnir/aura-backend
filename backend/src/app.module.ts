@@ -5,6 +5,7 @@ import { validateEnv } from './config/env.validation';
 import { AuraThrottlerGuard } from './common/aura-throttler.guard';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
+import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
@@ -19,6 +20,7 @@ import { SuperAdminBootstrap } from './bootstrap/super-admin.bootstrap';
     // Limite globale: 120 richieste/minuto per IP. Gli endpoint /auth/* hanno limiti più stretti.
     ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }] }),
     PrismaModule,
+    MailModule,
     AuthModule,
     UsersModule,
     RolesModule,
