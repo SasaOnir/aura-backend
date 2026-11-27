@@ -23,6 +23,7 @@ out/
 dist/
 build/
 backend/node_modules/.prisma/
+*.tsbuildinfo
 
 # Env (MAI committare i segreti)
 .env
@@ -50,3 +51,4 @@ upload/
 
 # Local Netlify folder
 .netlify
+.neon
