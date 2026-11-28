@@ -433,7 +433,7 @@ function shell(path, contentHTML, modeOverride) {
     { id:'listener',label:'Listener' },
     { id:'artist',  label:'Artist' },
   ];
-  const modeSwitch = modes.map(m => '<button class="mode-btn'+(m.id===mode?' active':'')+'" onclick="setMode(\'\'+m.id+\'\')">'+m.label+'</button>').join('');
+  const modeSwitch = modes.map(m => '<button class="mode-btn'+(m.id===mode?' active':'')+'" onclick="setMode(&#39;&#39;+m.id+&#39;&#39;)">'+m.label+'</button>').join('');
   return '<div class="app">' +
     '<aside class="sidebar" id="sidebar">' +
       '<div class="brand"><div class="logo">A</div><div class="name"><span class="grad">Aura</span></div></div>' +
@@ -443,7 +443,7 @@ function shell(path, contentHTML, modeOverride) {
         navItems.map(n => {
           // gestisci route attiva con parametri (es. /player/:id)
           const isActive = n.p === path || (n.p.startsWith('/artist') && path.startsWith('/artist')) || (n.p === '/' && (path === '/' || path.startsWith('/player')));
-          return '<button class="nav-item'+(isActive?' active':'')+'" onclick="navigate(\'\'+n.p+\'\')">'+IC[n.ico]+'<span>'+n.label+'</span></button>';
+          return '<button class="nav-item'+(isActive?' active':'')+'" onclick="navigate(&#39;&#39;+n.p+&#39;&#39;)">'+IC[n.ico]+'<span>'+n.label+'</span></button>';
         }).join('') +
       '</nav>' +
       '<div class="sidebar-foot">' +
@@ -454,7 +454,7 @@ function shell(path, contentHTML, modeOverride) {
     '</aside>' +
     '<main class="main">' +
       '<div class="topbar">' +
-        '<button class="menu-btn" onclick="document.getElementById(\'sidebar\').classList.toggle(\'open\')">'+IC.menu+'</button>' +
+        '<button class="menu-btn" onclick="document.getElementById(&#39;sidebar&#39;).classList.toggle(&#39;open&#39;)">'+IC.menu+'</button>' +
         '<h1>'+(currentRoutes()[path]?.title || 'Aura')+'</h1>' +
         '<div class="meta"><span class="dot"></span> API online · <span class="mono">aura-ai-sa.vercel.app</span></div>' +
       '</div>' +
@@ -560,9 +560,9 @@ async function usersPage(el, path) {
         '<td class="mono" style="font-size:11px;color:var(--muted)">'+fmt.rel(u.lastLoginAt)+'</td>' +
         '<td class="id">'+(u.id||'').slice(0,8)+'</td>' +
         '<td><div class="actions">' +
-          '<button class="btn-ico" title="Dettagli" onclick="userDetail(\'\'+u.id+\'\')">'+IC.search+'</button>' +
-          (u.status==='active' ? '<button class="btn-ico danger" title="Sospendi" onclick="userSuspend(\'\'+u.id+\'\')">'+IC.trash+'</button>' :
-           '<button class="btn-ico" title="Riattiva" onclick="userReactivate(\'\'+u.id+\'\')">'+IC.check+'</button>') +
+          '<button class="btn-ico" title="Dettagli" onclick="userDetail(&#39;&#39;+u.id+&#39;&#39;)">'+IC.search+'</button>' +
+          (u.status==='active' ? '<button class="btn-ico danger" title="Sospendi" onclick="userSuspend(&#39;&#39;+u.id+&#39;&#39;)">'+IC.trash+'</button>' :
+           '<button class="btn-ico" title="Riattiva" onclick="userReactivate(&#39;&#39;+u.id+&#39;&#39;)">'+IC.check+'</button>') +
         '</div></td>' +
       '</tr>';
     }).join('');
@@ -614,8 +614,8 @@ async function rolesPage(el, path) {
         '<td><span class="badge accent">'+(r._count?.permissions||0)+' permessi</span></td>' +
         '<td><span class="badge info">'+(r._count?.userRoles||0)+' utenti</span></td>' +
         '<td><div class="actions">' +
-          '<button class="btn-ico" title="Dettagli" onclick="roleDetail(\'\'+r.id+\'\')">'+IC.search+'</button>' +
-          (!r.isProtected ? '<button class="btn-ico danger" title="Elimina" onclick="roleDelete(\'\'+r.id+\'\',\'\'+r.name+\'\')">'+IC.trash+'</button>' : '') +
+          '<button class="btn-ico" title="Dettagli" onclick="roleDetail(&#39;&#39;+r.id+&#39;&#39;)">'+IC.search+'</button>' +
+          (!r.isProtected ? '<button class="btn-ico danger" title="Elimina" onclick="roleDelete(&#39;&#39;+r.id+&#39;&#39;,&#39;&#39;+r.name+&#39;&#39;)">'+IC.trash+'</button>' : '') +
         '</div></td>' +
       '</tr>';
     }).join('');
@@ -671,9 +671,9 @@ async function staffPage(el, path) {
         '<td class="mono" style="font-size:11px;color:var(--muted)">'+fmt.rel(u.lastLoginAt)+'</td>' +
         '<td class="id">'+(s.userId||'').slice(0,8)+'</td>' +
         '<td><div class="actions">' +
-          '<button class="btn-ico" title="Assegna ruolo" onclick="staffAssign(\'\'+s.userId+\'\',\'\'+(u.displayName||\'\')+\'\')">'+IC.key+'</button>' +
-          '<button class="btn-ico" title="MFA on/off" onclick="staffToggleMfa(\'\'+s.userId+\'\',\'+!s.mfaRequired+\')">'+IC.shield+'</button>' +
-          '<button class="btn-ico danger" title="Revoca staff" onclick="staffRevoke(\'\'+s.userId+\'\',\'\'+(u.displayName||\'\')+\'\')">'+IC.trash+'</button>' +
+          '<button class="btn-ico" title="Assegna ruolo" onclick="staffAssign(&#39;&#39;+s.userId+&#39;&#39;,&#39;&#39;+(u.displayName||&#39;&#39;)+&#39;&#39;)">'+IC.key+'</button>' +
+          '<button class="btn-ico" title="MFA on/off" onclick="staffToggleMfa(&#39;&#39;+s.userId+&#39;&#39;,&#39;+!s.mfaRequired+&#39;)">'+IC.shield+'</button>' +
+          '<button class="btn-ico danger" title="Revoca staff" onclick="staffRevoke(&#39;&#39;+s.userId+&#39;&#39;,&#39;&#39;+(u.displayName||&#39;&#39;)+&#39;&#39;)">'+IC.trash+'</button>' +
         '</div></td>' +
       '</tr>';
     }).join('');
@@ -707,7 +707,7 @@ window.staffAssign = (userId, name) => {
   openModal('Assegna ruolo a '+(name||''),
     '<div class="form-row"><label>Ruolo</label><select id="a_role">'+roleOpts+'</select></div>' +
     '<div class="form-row"><label>Motivo (opzionale)</label><input id="a_reason" placeholder="Motivo assegnazione"></div>',
-    '<button class="btn" onclick="closeModal()">Annulla</button><button class="btn primary" onclick="staffAssignSubmit(\'\'+userId+\'\')">Assegna</button>');
+    '<button class="btn" onclick="closeModal()">Annulla</button><button class="btn primary" onclick="staffAssignSubmit(&#39;&#39;+userId+&#39;&#39;)">Assegna</button>');
 };
 window.staffAssignSubmit = async (userId) => {
   const body = { roleName: $('#a_role').value, reason: $('#a_reason').value.trim() };
@@ -769,14 +769,14 @@ async function browsePage(el, path, param) {
     const genresList = genres || [];
     const artists = artistsRes.items || [];
     const featuredArtists = artists.slice(0,8).map(a =>
-      '<div class="artist-card" onclick="navigate(\'/artist-profile/\'+a.slug+\'\')">' +
+      '<div class="artist-card" onclick="navigate(&#39;/artist-profile/&#39;+a.slug+&#39;&#39;)">' +
         '<div class="ava-lg">'+fmt.initials(a.artistName)+'</div>' +
         '<div class="name">'+(a.artistName||'—')+'</div>' +
         '<div class="followers">'+(a._count?.follows||0)+' follower</div>' +
       '</div>'
     ).join('');
     const trackList = tracks.map((t,i) =>
-      '<div class="track-row" onclick="playTrack(\'\'+t.id+\'\')">' +
+      '<div class="track-row" onclick="playTrack(&#39;&#39;+t.id+&#39;&#39;)">' +
         '<div class="pos">'+(i+1)+'</div>' +
         '<div class="play-mini" style="grid-column:1">▶</div>' +
         '<div class="t-info"><div class="t-title">'+(t.title||'—')+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'—')+' · '+(t.release?.title||'')+'</div></div>' +
@@ -790,7 +790,7 @@ async function browsePage(el, path, param) {
       '<div class="hero">' +
         '<h1>Benvenuto su <span class="grad">Aura</span></h1>' +
         '<p>Sfoglia il catalogo musicale indipendente. '+tracks.length+' brani pubblicati · '+artists.length+' artisti · '+genresList.length+' generi.</p>' +
-        '<div class="search-bar">' + IC.search + '<input id="q" placeholder="Cerca brani, artisti, album…" oninput="searchCatalog(this.value)"><button class="btn primary sm" onclick="searchCatalog(document.getElementById(\'q\').value)">Cerca</button></div>' +
+        '<div class="search-bar">' + IC.search + '<input id="q" placeholder="Cerca brani, artisti, album…" oninput="searchCatalog(this.value)"><button class="btn primary sm" onclick="searchCatalog(document.getElementById(&#39;q&#39;).value)">Cerca</button></div>' +
         '<div id="searchResults"></div>' +
       '</div>' +
       '<div class="section-h"><h2>Artisti in evidenza</h2></div>' +
@@ -812,7 +812,7 @@ window.filterByGenre = async (g) => {
   const r = await api('/music/catalog/tracks?limit=24'+(g ? '&genre='+encodeURIComponent(g) : ''));
   const tracks = r.items || [];
   list.innerHTML = tracks.map((t,i) =>
-    '<div class="track-row" onclick="playTrack(\'\'+t.id+\'\')">' +
+    '<div class="track-row" onclick="playTrack(&#39;&#39;+t.id+&#39;&#39;)">' +
       '<div class="pos">'+(i+1)+'</div>' +
       '<div class="t-info"><div class="t-title">'+(t.title||'—')+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'—')+' · '+(t.release?.title||'')+'</div></div>' +
       '<div class="t-genres">'+(t.genres||[]).map(x => '<span class="badge">'+x.name+'</span>').join('')+'</div>' +
@@ -824,8 +824,8 @@ window.searchCatalog = async (q) => {
   const out = $('#searchResults'); if (!out || q.length < 2) { if (out) out.innerHTML = ''; return; }
   const r = await api('/music/catalog/search?q='+encodeURIComponent(q));
   let html = '';
-  if (r.tracks?.length) html += '<div style="margin-top:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Brani</div>' + r.tracks.slice(0,5).map(t => '<div class="track-row" onclick="playTrack(\'\'+t.id+\'\')"><div class="pos">♪</div><div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'')+'</div></div></div>').join('');
-  if (r.artists?.length) html += '<div style="margin-top:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Artisti</div>' + r.artists.slice(0,3).map(a => '<div class="track-row" onclick="navigate(\'/artist-profile/\'+a.slug+\'\')"><div class="pos">★</div><div class="t-info"><div class="t-title">'+a.artistName+'</div><div class="t-meta">'+(a._count?.follows||0)+' follower</div></div></div>').join('');
+  if (r.tracks?.length) html += '<div style="margin-top:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Brani</div>' + r.tracks.slice(0,5).map(t => '<div class="track-row" onclick="playTrack(&#39;&#39;+t.id+&#39;&#39;)"><div class="pos">♪</div><div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+(t.release?.artist?.artistName||'')+'</div></div></div>').join('');
+  if (r.artists?.length) html += '<div style="margin-top:14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Artisti</div>' + r.artists.slice(0,3).map(a => '<div class="track-row" onclick="navigate(&#39;/artist-profile/&#39;+a.slug+&#39;&#39;)"><div class="pos">★</div><div class="t-info"><div class="t-title">'+a.artistName+'</div><div class="t-meta">'+(a._count?.follows||0)+' follower</div></div></div>').join('');
   out.innerHTML = html || '<div style="margin-top:14px;color:var(--muted);font-size:13px">Nessun risultato.</div>';
 };
 
@@ -841,11 +841,11 @@ async function playerPage(el, path, trackId) {
         '<div>' +
           '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:6px">Brano</div>' +
           '<h1 style="font-size:32px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px">'+(t.title||'—')+'</h1>' +
-          '<div style="color:var(--muted);margin-bottom:18px"><span style="cursor:pointer;color:var(--accent)" onclick="navigate(\'/artist-profile/\'+(artist.slug||\'\')+\'\')">'+(artist.artistName||'—')+'</span> · '+(t.release?.title||'')+'</div>' +
+          '<div style="color:var(--muted);margin-bottom:18px"><span style="cursor:pointer;color:var(--accent)" onclick="navigate(&#39;/artist-profile/&#39;+(artist.slug||&#39;&#39;)+&#39;&#39;)">'+(artist.artistName||'—')+'</span> · '+(t.release?.title||'')+'</div>' +
           '<div style="display:flex;gap:10px;margin-bottom:24px">' +
-            '<button class="btn primary" onclick="playTrack(\'\'+t.id+\'\')">'+IC.play+' Riproduci</button>' +
-            '<button class="btn" onclick="addToPlaylist(\'\'+t.id+\'\')">+ Aggiungi a playlist</button>' +
-            '<button class="btn" onclick="followArtist(\'\'+artist.id+\'\')">♥ Segui artista</button>' +
+            '<button class="btn primary" onclick="playTrack(&#39;&#39;+t.id+&#39;&#39;)">'+IC.play+' Riproduci</button>' +
+            '<button class="btn" onclick="addToPlaylist(&#39;&#39;+t.id+&#39;&#39;)">+ Aggiungi a playlist</button>' +
+            '<button class="btn" onclick="followArtist(&#39;&#39;+artist.id+&#39;&#39;)">♥ Segui artista</button>' +
           '</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+(t.genres||[]).map(g => '<span class="badge accent">'+g.name+'</span>').join('')+'</div>' +
           '<div class="card" style="padding:14px 16px;margin:0">' +
@@ -869,7 +869,7 @@ async function playlistsPage(el, path) {
     const r = await api('/music/me/playlists');
     const items = r.items || [];
     const list = items.length ? items.map(p =>
-      '<div class="album-card" onclick="navigate(\'/playlist/\'+p.id+\'\')">' +
+      '<div class="album-card" onclick="navigate(&#39;/playlist/&#39;+p.id+&#39;&#39;)">' +
         '<div class="cover">♪</div>' +
         '<div class="body"><div class="title">'+(p.title||'—')+'</div><div class="artist">'+(p._count?.items||0)+' brani · '+(p.visibility||'private')+'</div></div>' +
       '</div>'
@@ -900,7 +900,7 @@ async function historyPage(el, path) {
     const r = await api('/music/me/history?limit=50');
     const items = r.items || [];
     const list = items.length ? items.map((l,i) =>
-      '<div class="track-row" onclick="playTrack(\'\'+(l.track?.id||\'\')+\'\')">' +
+      '<div class="track-row" onclick="playTrack(&#39;&#39;+(l.track?.id||&#39;&#39;)+&#39;&#39;)">' +
         '<div class="pos">'+(i+1)+'</div>' +
         '<div class="t-info"><div class="t-title">'+(l.track?.title||'—')+'</div><div class="t-meta">'+(l.track?.release?.artist?.artistName||'')+' · '+fmt.rel(l.createdAt)+'</div></div>' +
         '<div></div><div class="t-dur">'+(l.eventType==='complete'?'✓':'▶')+'</div>' +
@@ -919,7 +919,7 @@ async function followsPage(el, path) {
     const r = await api('/music/me/follows');
     const items = r.items || [];
     const list = items.length ? items.map(a =>
-      '<div class="artist-card" onclick="navigate(\'/artist-profile/\'+a.slug+\'\')">' +
+      '<div class="artist-card" onclick="navigate(&#39;/artist-profile/&#39;+a.slug+&#39;&#39;)">' +
         '<div class="ava-lg">'+fmt.initials(a.artistName)+'</div>' +
         '<div class="name">'+(a.artistName||'—')+'</div>' +
         '<div class="followers">'+(a._count?.follows||0)+' follower</div>' +
@@ -982,7 +982,7 @@ function renderPlayerBar(t) {
     '</div>' +
     '<div class="player-extra">' +
       '<span class="badge accent">'+(t.genres?.[0]?.name||'')+'</span>' +
-      '<button class="btn sm" onclick="navigate(\'/player/\'+t.id+\'\')">Dettagli</button>' +
+      '<button class="btn sm" onclick="navigate(&#39;/player/&#39;+t.id+&#39;&#39;)">Dettagli</button>' +
     '</div>';
   // simulazione progress
   let pct = 0;
@@ -1004,7 +1004,7 @@ window.addToPlaylist = async (trackId) => {
     const items = r.items || [];
     if (!items.length) { toast('Crea prima una playlist','warn'); navigate('/playlists'); return; }
     openModal('Aggiungi a playlist',
-      items.map(p => '<div class="track-row" onclick="addToPlaylistSubmit(\'\'+p.id+\'\',\'\'+trackId+\'\')"><div class="pos">♪</div><div class="t-info"><div class="t-title">'+p.title+'</div><div class="t-meta">'+(p._count?.items||0)+' brani</div></div></div>').join(''),
+      items.map(p => '<div class="track-row" onclick="addToPlaylistSubmit(&#39;&#39;+p.id+&#39;&#39;,&#39;&#39;+trackId+&#39;&#39;)"><div class="pos">♪</div><div class="t-info"><div class="t-title">'+p.title+'</div><div class="t-meta">'+(p._count?.items||0)+' brani</div></div></div>').join(''),
       '<button class="btn" onclick="closeModal()">Chiudi</button>');
   } catch (e) { toast(e.message, 'err'); }
 };
@@ -1052,7 +1052,7 @@ async function artistStudioPage(el, path) {
       const r = await api('/music/artist/my-releases');
       const rows = (r.releases||[]).flatMap(rel =>
         (rel.tracks||[]).map(t =>
-          '<div class="track-row" onclick="navigate(\'/player/\'+t.id+\'\')">' +
+          '<div class="track-row" onclick="navigate(&#39;/player/&#39;+t.id+&#39;&#39;)">' +
             '<div class="pos">'+(t.position||1)+'</div>' +
             '<div class="t-info"><div class="t-title">'+(t.title||'—')+'</div><div class="t-meta">'+rel.title+' · '+(t.status==='published'?'<span class="badge ok">pubblicato</span>':'<span class="badge warn">'+t.status+'</span>')+'</div></div>' +
             '<div>'+(t._count?.listening||0)+' ascolti</div>' +
@@ -1095,8 +1095,8 @@ async function artistReleasesPage(el, path) {
         '<div class="card-h"><h3>'+(rel.title||'—')+'</h3><span class="sub">'+(rel.releaseType||'')+' · '+(rel.status||'')+'</span></div>' +
         '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+(rel.releaseDate?fmt.date(rel.releaseDate):'')+'</div>' +
         (rel.tracks?.length ? '<div style="padding:0;margin:0">'+rel.tracks.map(t =>
-          '<div class="track-row" onclick="navigate(\'/player/\'+t.id+\'\')"><div class="pos">'+(t.position||1)+'</div><div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+dur(t.duration)+' · '+(t.status==='published'?'pubblicato':t.status)+'</div></div>' +
-          (t.status==='published'?'<button class="btn sm" onclick="event.stopPropagation();navigate(\'/player/\'+t.id+\'\')">Apri</button>':'<button class="btn sm primary" onclick="event.stopPropagation();publishTrack(\'\'+t.id+\'\')">Pubblica</button>')+'</div>'
+          '<div class="track-row" onclick="navigate(&#39;/player/&#39;+t.id+&#39;&#39;)"><div class="pos">'+(t.position||1)+'</div><div class="t-info"><div class="t-title">'+t.title+'</div><div class="t-meta">'+dur(t.duration)+' · '+(t.status==='published'?'pubblicato':t.status)+'</div></div>' +
+          (t.status==='published'?'<button class="btn sm" onclick="event.stopPropagation();navigate(&#39;/player/&#39;+t.id+&#39;&#39;)">Apri</button>':'<button class="btn sm primary" onclick="event.stopPropagation();publishTrack(&#39;&#39;+t.id+&#39;&#39;)">Pubblica</button>')+'</div>'
         ).join('')+'</div>' : '<div class="empty">Nessun brano</div>') +
       '</div>'
     ).join('') || '<div class="empty"><div class="e-ico">'+IC.staff+'</div>Nessuna release. Creane una dalla dashboard.</div>';
