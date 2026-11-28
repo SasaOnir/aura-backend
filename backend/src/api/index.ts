@@ -41,10 +41,14 @@ class LoggingExceptionFilter implements ExceptionFilter {
       req?.method === 'GET' &&
       !API_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '.'))
     ) {
-      // Forza 200 + text/html espliciti (helmet/Express possono averli pre-settati a 404/json)
-      res.status(200);
-      res.set('Content-Type', 'text/html; charset=utf-8');
-      res.send(SPA_HTML);
+      // Bypassa Express middleware chain: scrive direttamente header + body raw.
+      // res.send() viene intercettato da helmet/Express che forzano application/json.
+      const body = Buffer.from(SPA_HTML, 'utf-8');
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Length': body.length.toString(),
+      });
+      res.end(body);
       return;
     }
 
