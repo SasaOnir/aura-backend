@@ -1,23 +1,47 @@
-// API handler per Vercel — wrappa NestJS app come serverless handler
-// Lazy import di AppModule dentro il try/catch per catturare errori di load.
+// API handler per Vercel — NestJS completo con Express instance diretta
+// Prisma 6 + adapter-neon (no binary query engine) → compatibile Node 26.
+//
+// Stack:
+// - NestJS Express adapter (app.init() poi expressApp(req,res) come handler)
+// - Prisma 6 + @prisma/adapter-neon (driver JS puro via @neondatabase/serverless)
+// - Bootstrap Super Admin idempotente al primo cold start
+// - Error handler Express + DebugExceptionFilter per visibilità errori
 
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ExceptionFilter, Catch, ArgumentsHost, HttpException, Logger } from '@nestjs/common';
 import express from 'express';
-import serverlessExpress from '@vendia/serverless-express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { AppModule } from '../app.module';
+import { SuperAdminBootstrap } from '../bootstrap/super-admin.bootstrap';
+
+// Exception filter che logga e ritorna errore strutturato (utile in serverless
+// dove i log runtime non sono sempre visibili via API)
+@Catch()
+class LoggingExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('ExceptionFilter');
+  catch(exception: any, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const res = ctx.getResponse();
+    const req = ctx.getRequest();
+    const status = exception instanceof HttpException ? exception.getStatus() : 500;
+    const msg = exception?.message || String(exception);
+    this.logger.error(`${req?.method} ${req?.url} → ${status}: ${msg}`);
+    if (res.headersSent) return;
+    const response: any = exception instanceof HttpException ? exception.getResponse() : null;
+    res.status(status).json(
+      typeof response === 'object' && response && !Array.isArray(response)
+        ? response
+        : { statusCode: status, message: msg, error: exception?.name },
+    );
+  }
+}
 
 let cachedHandler: any = null;
-let bootError: string | null = null;
 
 async function bootstrap() {
-  if (bootError) throw new Error(bootError);
   if (cachedHandler) return cachedHandler;
-
-  // Lazy import per catturare errori di load (argon2 native, Prisma client, ecc.)
-  const { AppModule } = await import('../app.module');
 
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
@@ -26,7 +50,21 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
 
-  app.use(helmet());
+  // Helmet con CSP permissiva: la home page HTML usa script inline (single-page),
+  // quindi permettiamo 'unsafe-inline' su script-src. img-src/style-src ampi per
+  // eventuali avatar/risorse esterne. connect-src punta allo stesso dominio.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+      },
+    },
+  }));
   app.use(cookieParser());
 
   const corsOrigin = process.env.CORS_ORIGIN || 'https://aura-backend-rouge.vercel.app';
@@ -36,6 +74,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
+  app.useGlobalFilters(new LoggingExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -46,28 +85,33 @@ async function bootstrap() {
   );
 
   app.getHttpAdapter().get('/health', (_req: any, res: any) =>
-    res.json({ status: 'ok', ts: Date.now(), nest: 'booted' }),
+    res.json({ status: 'ok', ts: Date.now() }),
   );
 
   await app.init();
 
-  cachedHandler = serverlessExpress({ app: expressApp });
+  // Bootstrap Super Admin (idempotente, una tantum al primo cold start)
+  try {
+    const bootstrap = app.get(SuperAdminBootstrap);
+    await bootstrap.run();
+  } catch (e: any) {
+    console.error('Bootstrap Super Admin fallito:', e.message);
+  }
+
+  // Handler = Express instance diretta (NO @vendia/serverless-express, abbandonato)
+  cachedHandler = (req: any, res: any) => expressApp(req, res);
   return cachedHandler;
 }
 
 export default async function handler(req: any, res: any) {
   try {
     const app = await bootstrap();
-    return await app(req, res);
+    return app(req, res);
   } catch (e: any) {
-    const errJson = {
+    res.status(500).json({
+      statusCode: 500,
       error: 'bootstrap_failed',
       message: e?.message || String(e),
-      stack: e?.stack?.split('\n').slice(0, 15),
-      name: e?.name,
-      code: e?.code,
-    };
-    console.error('HANDLER ERROR:', JSON.stringify(errJson));
-    res.status(500).json(errJson);
+    });
   }
 }

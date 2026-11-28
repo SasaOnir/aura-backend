@@ -12,8 +12,19 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  // Sicurezza (PRD §15)
-  app.use(helmet());
+  // Sicurezza (PRD §15) — CSP permissiva per home page HTML con script inline
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+      },
+    },
+  }));
   app.use(cookieParser());
 
   // CORS restrictivo (PRD §15)

@@ -1,0 +1,1893 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aura — Piattaforma per artisti di musica AI</title>
+<style>
+:root{
+  /* Aurora: indigo notte + corallo, viola, turchese, giallo sole */
+  --bg:#0f0a2e; --bg-2:#160f3a; --surface:#1f1648; --surface-2:#291c5c; --surface-3:#35256e;
+  --line:#3a2870; --line-2:#4a3380; --text:#fdf6ff; --text-dim:#c9b8f5; --text-mute:#9b87d6;
+  --accent:#ff7eb6; --accent-2:#a26bff; --accent-soft:rgba(255,126,182,.18);
+  --sun:#ffd166; --mint:#7afcd6; --coral:#ff7eb6; --violet:#a26bff; --turq:#5ef0e8;
+  --ok:#7afcd6; --warn:#ffd166; --danger:#ff5d8f; --info:#5ef0e8;
+  --grad-aurora:linear-gradient(135deg,#ff7eb6 0%,#a26bff 45%,#5ef0e8 100%);
+  --grad-sun:linear-gradient(135deg,#ffd166 0%,#ff7eb6 100%);
+  --grad-joy:linear-gradient(135deg,#5ef0e8 0%,#7afcd6 50%,#ffd166 100%);
+  --radius:14px; --radius-sm:9px;
+  --shadow:0 18px 40px -18px rgba(162,107,255,.55);
+  --maxw:1240px;
+  --font:'Segoe UI',Roboto,system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%;height:auto;display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#a26bff,#ff7eb6);border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#5ef0e8,#ffd166)}
+
+/* ── Layout ── */
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;background:var(--bg-2);border-right:1px solid var(--line);padding:22px 18px;display:flex;flex-direction:column;gap:6px;z-index:5}
+.main{padding:26px 32px 160px;min-width:0}
+.content{max-width:var(--maxw);margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.brand .dot{width:30px;height:30px;border-radius:9px;background:var(--grad-aurora);box-shadow:0 0 18px rgba(255,126,182,.55)}
+.brand .name{font-weight:800;font-size:22px;letter-spacing:.5px}
+.brand .tag{font-size:10.5px;color:var(--text-mute);margin-top:-2px;letter-spacing:.4px}
+.search{margin:6px 0 2px;display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:9px 12px}
+.search input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px}
+.search input::placeholder{color:var(--text-mute)}
+.nav-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-mute);margin:14px 6px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;color:var(--text-dim);font-size:14.5px;font-weight:500;transition:background .15s,color .15s;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface);color:var(--text)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent)}
+.nav-item .ic{width:20px;flex:0 0 20px;text-align:center}
+.nav-item .badge{margin-left:auto;background:var(--surface-2);color:var(--text-dim);font-size:11px;padding:2px 8px;border-radius:10px}
+.usercard{margin-top:auto;display:flex;gap:11px;align-items:center;padding:11px;border-radius:12px;background:var(--surface);border:1px solid var(--line);cursor:pointer}
+.usercard .av{width:38px;height:38px;border-radius:50%;flex:0 0 38px;display:grid;place-items:center;font-weight:700;color:#1a0b3d}
+.usercard .meta{min-width:0;flex:1}
+.usercard .meta b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usercard .meta span{font-size:11.5px;color:var(--text-mute)}
+
+/* ── Mobile ── */
+.mobile-bar{display:none;position:sticky;top:0;z-index:50;background:var(--bg-2);padding:12px 16px;border-bottom:1px solid var(--line);align-items:center;gap:12px}
+.mobile-bar .brand{margin:0}
+.mobile-bar .burger{margin-left:auto;width:42px;height:42px;border-radius:10px;background:var(--surface);display:grid;place-items:center;border:1px solid var(--line)}
+
+/* ── Topbar / buttons ── */
+.topbar{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.topbar h1{font-size:clamp(20px,2.6vw,30px);font-weight:800;margin:0;letter-spacing:-.2px}
+.topbar .sub{color:var(--text-mute);font-size:13.5px;margin-top:2px}
+.topbar .actions{margin-left:auto;display:flex;gap:9px;flex-wrap:wrap}
+.btn{padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--text);transition:background .15s,border-color .15s,transform .08s}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--grad-aurora);color:#1a0b3d;border-color:transparent;box-shadow:0 8px 20px -8px rgba(255,126,182,.6)}
+.btn-primary:hover{filter:brightness(1.08) saturate(1.1)}
+.btn-ghost{background:transparent}
+.btn-ghost:hover{background:var(--surface)}
+.btn-danger{color:var(--danger);border-color:#5a2a4a}
+.btn-danger:hover{background:rgba(255,107,107,.1)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* ── Landing ── */
+.landing{min-height:100vh;display:flex;flex-direction:column;background:radial-gradient(900px 500px at 80% -10%,rgba(255,126,182,.20),transparent 60%),radial-gradient(700px 500px at 10% 20%,rgba(162,107,255,.18),transparent 60%),radial-gradient(600px 400px at 50% 110%,rgba(94,240,232,.14),transparent 60%),var(--bg)}
+.landing header{display:flex;align-items:center;justify-content:space-between;padding:22px 32px;max-width:var(--maxw);margin:0 auto;width:100%}
+.landing header .brand .tag{font-size:10.5px}
+.landing header nav{display:flex;gap:6px;align-items:center}
+.landing header nav a,.landing header nav button{padding:9px 14px;border-radius:9px;font-size:13.5px;color:var(--text-dim)}
+.landing header nav a:hover,.landing header nav button:hover{background:var(--surface);color:var(--text);text-decoration:none}
+.landing .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px 60px;max-width:880px;margin:0 auto}
+.landing .hero .eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:6px 14px;font-size:12px;color:var(--accent);margin-bottom:22px}
+.landing .hero h1{font-size:clamp(32px,6vw,58px);font-weight:800;line-height:1.05;letter-spacing:-1px;margin:0 0 18px;background:linear-gradient(135deg,#fff 30%,var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.landing .hero p.lead{font-size:clamp(15px,2vw,19px);color:var(--text-dim);max-width:640px;margin:0 0 30px}
+.landing .hero .cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.landing .hero .cta .btn{padding:13px 24px;font-size:15px}
+.landing .stats{display:flex;gap:38px;justify-content:center;flex-wrap:wrap;margin-top:46px}
+.landing .stats .s{text-align:center}
+.landing .stats .s .v{font-size:28px;font-weight:800;letter-spacing:-.5px}
+.landing .stats .s .l{font-size:12px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
+.landing footer{border-top:1px solid var(--line);padding:22px 32px;max-width:var(--maxw);margin:0 auto;width:100%;display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;color:var(--text-mute);font-size:12.5px}
+.landing footer .links{display:flex;gap:16px;flex-wrap:wrap}
+.landing footer a{color:var(--text-dim)}
+
+/* ── Auth ── */
+.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:30px 16px;background:radial-gradient(700px 400px at 50% -10%,rgba(255,126,182,.18),transparent 60%),radial-gradient(600px 400px at 90% 90%,rgba(162,107,255,.16),transparent 60%),var(--bg)}
+.auth-card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:34px;box-shadow:var(--shadow)}
+.auth-card .brand{justify-content:center;margin-bottom:8px}
+.auth-card .brand .name{font-size:24px}
+.auth-card h1{font-size:22px;margin:6px 0 4px;text-align:center}
+.auth-card .sub{text-align:center;color:var(--text-mute);font-size:13px;margin-bottom:24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;color:var(--text-dim);margin-bottom:6px;font-weight:600}
+.field input[type=text],.field input[type=email],.field input[type=password],.field textarea,.field select{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:9px;color:var(--text);padding:11px 13px;font-size:14px;outline:none;transition:border-color .15s}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}
+.field textarea{min-height:80px;resize:vertical}
+.field .hint{font-size:11.5px;color:var(--text-mute);margin-top:5px}
+.field .error{font-size:11.5px;color:var(--danger);margin-top:5px;display:none}
+.field.invalid input,.field.invalid textarea,.field.invalid select{border-color:var(--danger)}
+.field.invalid .error{display:block}
+.consent-block{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:16px 0}
+.consent-block .ct{font-size:12px;color:var(--text-mute);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.consent-row{display:flex;gap:11px;align-items:flex-start;padding:9px 0}
+.consent-row .cb{margin-top:2px;accent-color:var(--accent);width:18px;height:18px;flex:0 0 18px;cursor:pointer}
+.consent-row .lbl{font-size:13px;line-height:1.45}
+.consent-row .lbl a{text-decoration:underline}
+.consent-row.required .lbl b{color:var(--danger);font-weight:600}
+.age-block{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 16px}
+.age-block label{display:flex;gap:11px;align-items:flex-start;cursor:pointer}
+.age-block input{margin-top:2px;accent-color:var(--accent);width:18px;height:18px;flex:0 0 18px}
+.age-block .txt{font-size:13px}
+.pw-strength{height:4px;border-radius:2px;background:var(--line);margin-top:8px;overflow:hidden}
+.pw-strength .bar{height:100%;width:0;background:var(--danger);transition:width .2s,background .2s}
+
+/* ── Cards / grids ── */
+.section-head{display:flex;align-items:baseline;gap:10px;margin:26px 0 14px}
+.section-head h2{font-size:18px;margin:0;font-weight:700;letter-spacing:-.1px}
+.section-head .more{margin-left:auto;font-size:12.5px;color:var(--text-mute);cursor:pointer}
+.section-head .more:hover{color:var(--accent)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chip{padding:7px 14px;border-radius:30px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--text-dim);cursor:pointer;transition:background .15s,color .15s}
+.chip:hover{background:var(--surface-2)}
+.chip.active{background:var(--accent);color:#1a0b3d;border-color:transparent;font-weight:600}
+.grid{display:grid;gap:18px}
+.grid-tracks{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.grid-artists{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.grid-playlists{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;transition:transform .12s,background .15s;position:relative;cursor:pointer}
+.card:hover{background:var(--surface-2);transform:translateY(-2px)}
+.card .cover{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1/1;margin-bottom:11px}
+.card .cover .play{position:absolute;bottom:8px;right:8px;width:44px;height:44px;border-radius:50%;background:var(--grad-aurora);color:#1a0b3d;display:grid;place-items:center;opacity:0;transform:translateY(8px);transition:opacity .15s,transform .15s;box-shadow:0 10px 20px -8px rgba(255,126,182,.7);font-size:16px}
+.card:hover .cover .play{opacity:1;transform:translateY(0)}
+.card .cover .badge-ai{position:absolute;top:8px;left:8px;font-size:10px;font-weight:700;letter-spacing:.5px;background:rgba(26,11,61,.78);color:var(--sun);padding:4px 8px;border-radius:30px;border:1px solid rgba(255,209,102,.5)}
+.card .cover .badge-aura{position:absolute;bottom:8px;left:8px;font-size:10.5px;font-weight:700;background:rgba(26,11,61,.82);color:var(--sun);padding:4px 9px;border-radius:30px;border:1px solid rgba(255,209,102,.55);cursor:pointer;transition:transform .12s,background .12s}
+.card .cover .badge-aura:hover{transform:scale(1.08);background:linear-gradient(135deg,#ffd166,#ff7eb6);color:#1a0b3d}
+.card .cover .plt{position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.16);font-size:54px}
+.card .title{font-size:14.5px;font-weight:700;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .artist{font-size:12.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .meta{display:flex;gap:8px;margin-top:9px;align-items:center;font-size:11.5px;color:var(--text-mute)}
+.card .meta .dot{width:3px;height:3px;border-radius:50%;background:var(--text-mute)}
+.card .like-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(8,16,26,.55);display:grid;place-items:center;font-size:14px;color:var(--text-dim);z-index:2}
+.card .like-btn:hover{color:var(--danger)}
+.card .like-btn.liked{color:var(--danger)}
+.artist-card{text-align:center}
+.artist-card .av{width:100%;aspect-ratio:1/1;border-radius:50%;display:grid;place-items:center;font-size:42px;font-weight:700;color:#1a0b3d;margin-bottom:11px}
+.artist-card .name{font-size:14.5px;font-weight:700}
+.artist-card .followers{font-size:11.5px;color:var(--text-mute);margin-top:2px}
+.playlist-card{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px;cursor:pointer;transition:background .15s}
+.playlist-card:hover{background:var(--surface-2)}
+.playlist-card .cover{width:72px;height:72px;border-radius:9px;flex:0 0 72px;display:grid;place-items:center;font-size:30px}
+.playlist-card .meta{min-width:0;flex:1}
+.playlist-card .meta h3{margin:0 0 4px;font-size:15px}
+.playlist-card .meta p{margin:0;font-size:12.5px;color:var(--text-mute)}
+.playlist-card .del{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--text-mute)}
+.playlist-card .del:hover{color:var(--danger);background:rgba(255,107,107,.1)}
+
+/* ── Hero artist profile ── */
+.hero{position:relative;border-radius:18px;overflow:hidden;margin-bottom:26px;background:var(--grad-aurora);border:1px solid var(--line);padding:36px}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,10,46,.15) 0%,rgba(15,10,46,.78) 100%);pointer-events:none}
+.hero .row,.hero .info{position:relative}
+.hero .row{display:flex;gap:24px;align-items:flex-end;position:relative;flex-wrap:wrap}
+.hero .av{width:140px;height:140px;border-radius:50%;flex:0 0 140px;display:grid;place-items:center;font-size:54px;font-weight:800;color:#1a0b3d;box-shadow:0 18px 40px -16px rgba(0,0,0,.7)}
+.hero .info{min-width:0}
+.hero .info h1{font-size:clamp(24px,3.4vw,40px);margin:0 0 8px;font-weight:800;letter-spacing:-.4px}
+.hero .info .stats{display:flex;gap:18px;color:var(--text-dim);font-size:13.5px;flex-wrap:wrap}
+.hero .info .stats b{color:var(--text)}
+.hero .info .tags{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.hero .info .tag{background:var(--accent-soft);border:1px solid rgba(255,126,182,.45);color:var(--accent);padding:5px 11px;border-radius:30px;font-size:11.5px;font-weight:600}
+.hero .acts{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+
+/* ── Chain (creative chain) ── */
+.chain{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:22px}
+.chain h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chain h3 .pill{font-size:10.5px;font-weight:700;background:rgba(255,209,102,.18);color:var(--sun);padding:3px 9px;border-radius:30px;border:1px solid rgba(255,209,102,.5)}
+.chain .desc{color:var(--text-mute);font-size:13px;margin:0 0 16px}
+.chain .grid-c{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.chain .field{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;min-width:0}
+.chain .field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-mute);margin-bottom:5px}
+.chain .field span{font-size:13.5px;color:var(--text);word-break:break-word}
+
+/* ── Tracklist ── */
+.track-row{display:grid;grid-template-columns:32px 1fr auto auto auto;align-items:center;gap:14px;padding:9px 12px;border-radius:10px;cursor:pointer;transition:background .12s}
+.track-row:hover{background:var(--surface)}
+.track-row.playing{background:var(--accent-soft)}
+.track-row.playing .idx{color:var(--accent)}
+.track-row .idx{color:var(--text-mute);font-size:14px;text-align:center}
+.track-row .tt{min-width:0}
+.track-row .tt b{font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-row .tt span{font-size:12px;color:var(--text-mute)}
+.track-row .dur{font-size:12.5px;color:var(--text-mute);font-variant-numeric:tabular-nums}
+.track-row .plays{font-size:12px;color:var(--text-mute);font-variant-numeric:tabular-nums}
+.track-row .acts{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.track-row:hover .acts{opacity:1}
+.track-row.header{cursor:default;background:transparent}
+.track-row.header:hover{background:transparent}
+.icon-btn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--text-dim);background:none}
+.icon-btn:hover{background:var(--surface-2);color:var(--accent)}
+.icon-btn.danger:hover{color:var(--danger)}
+
+/* ── Upload ── */
+.upload-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:22px}
+.dropzone{border:2px dashed var(--line);border-radius:var(--radius);padding:42px 24px;text-align:center;background:var(--surface);transition:border-color .15s,background .15s;cursor:pointer}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:var(--surface-2)}
+.dropzone .ic{font-size:42px;color:var(--accent);margin-bottom:14px}
+.dropzone h3{margin:0 0 6px;font-size:17px}
+.dropzone p{margin:0;color:var(--text-mute);font-size:13.5px}
+.dropzone .filename{margin-top:12px;color:var(--accent);font-weight:600;font-size:13.5px}
+.form-section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px}
+.form-section h3{margin:0 0 16px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:9px}
+.form-section h3 .num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#1a0b3d;display:grid;place-items:center;font-size:12px;font-weight:700}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.toggle-row{display:flex;align-items:center;gap:12px;padding:11px 0}
+.toggle{width:42px;height:24px;border-radius:30px;background:var(--line);position:relative;transition:background .15s;flex:0 0 42px;cursor:pointer}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+.toggle.on{background:var(--accent)}
+.toggle.on::after{transform:translateX(18px)}
+.toggle-row .lbl{font-size:13.5px}
+.toggle-row .lbl b{display:block}
+.toggle-row .lbl span{font-size:11.5px;color:var(--text-mute)}
+.declaration{background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text-dim);margin:14px 0}
+.declaration b{color:var(--text)}
+
+/* ── Settings ── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.settings-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.settings-card h3{margin:0 0 6px;font-size:15px;display:flex;align-items:center;gap:9px}
+.settings-card p{color:var(--text-mute);font-size:13px;margin:0 0 14px}
+.consent-list .row{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.consent-list .row:last-child{border-bottom:none}
+.consent-list .row .ic{width:30px;text-align:center;font-size:16px}
+.consent-list .row .meta{flex:1;min-width:0}
+.consent-list .row .meta b{display:block;font-size:13.5px}
+.consent-list .row .meta span{font-size:11.5px;color:var(--text-mute)}
+.consent-list .row .st{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.consent-list .row .st.on{background:rgba(126,231,135,.14);color:var(--ok)}
+.consent-list .row .st.off{background:rgba(255,184,77,.14);color:var(--warn)}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.stat label{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-mute)}
+.stat .v{font-size:26px;font-weight:800;margin-top:6px;letter-spacing:-.4px}
+
+/* ── Legal pages ── */
+.legal{max-width:780px}
+.legal h1{font-size:clamp(24px,3vw,34px);margin:0 0 8px;font-weight:800}
+.legal .updated{color:var(--text-mute);font-size:12.5px;margin-bottom:24px}
+.legal h2{font-size:18px;margin:26px 0 10px;font-weight:700;color:var(--text)}
+.legal h3{font-size:14.5px;margin:18px 0 8px;color:var(--text-dim)}
+.legal p{font-size:14px;color:var(--text-dim);margin:0 0 12px}
+.legal ul{font-size:14px;color:var(--text-dim);margin:0 0 14px;padding-left:22px}
+.legal ul li{margin-bottom:6px}
+.legal .callout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;margin:14px 0;font-size:13.5px;color:var(--text-dim)}
+.legal .callout b{color:var(--text)}
+.legal table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+.legal th,.legal td{text-align:left;padding:9px 11px;border:1px solid var(--line)}
+.legal th{background:var(--surface);color:var(--text);font-weight:600}
+.legal td{color:var(--text-dim)}
+
+/* ── Player ── */
+.player{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(10,17,24,.96);border-top:1px solid var(--line);backdrop-filter:blur(14px)}
+.player .inner{max-width:var(--maxw);margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr 1fr;align-items:center;gap:18px;padding:12px 22px}
+.player .info{display:flex;gap:13px;align-items:center;min-width:0}
+.player .info .cover{width:54px;height:54px;border-radius:8px;flex:0 0 54px;display:grid;place-items:center;font-size:22px;color:#fff}
+.player .info .meta{min-width:0}
+.player .info .meta b{font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .info .meta span{font-size:11.5px;color:var(--text-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .info .meta .model{font-size:10.5px;color:var(--accent);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .controls{display:flex;flex-direction:column;align-items:center;gap:6px}
+.player .btns{display:flex;gap:14px;align-items:center}
+.player .btns button{width:34px;height:34px;display:grid;place-items:center;color:var(--text-dim);border-radius:50%}
+.player .btns button:hover{color:var(--text);background:var(--surface)}
+.player .btns .play{width:42px;height:42px;background:var(--grad-aurora);color:#1a0b3d}
+.player .btns .play:hover{filter:brightness(1.08) saturate(1.1)}
+.player .btns .like.active{color:var(--danger)}
+.player .progress{display:flex;align-items:center;gap:10px;width:100%;font-size:11px;color:var(--text-mute);font-variant-numeric:tabular-nums}
+.player .bar{flex:1;height:5px;border-radius:3px;background:var(--line);cursor:pointer;position:relative;overflow:hidden}
+.player .bar .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);border-radius:3px;transition:width .08s linear}
+.player .right{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.player .right .vol{width:100px;height:5px;border-radius:3px;background:var(--line);position:relative;cursor:pointer}
+.player .right .vol .fill{position:absolute;left:0;top:0;bottom:0;width:80%;background:var(--text-dim);border-radius:3px}
+
+/* ── Modal ── */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(4,10,18,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal .box{background:var(--bg-2);border:1px solid var(--line);border-radius:18px;width:100%;max-width:480px;padding:26px;box-shadow:var(--shadow);position:relative}
+.modal h2{margin:0 0 4px;font-size:20px}
+.modal p{margin:0 0 18px;color:var(--text-mute);font-size:13.5px}
+.modal .share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.modal .share-grid button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--text-dim)}
+.modal .share-grid button:hover{background:var(--surface-2);color:var(--accent)}
+.modal .share-grid button .ic{font-size:22px}
+.modal .copy{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.modal .copy input{flex:1;background:none;border:none;color:var(--text);padding:11px 13px;outline:none;font-size:13px}
+.modal .copy button{padding:0 16px;background:var(--accent-2);color:#fff;font-weight:600;font-size:13px}
+.modal .close-x{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:10px;background:var(--surface);display:grid;place-items:center;color:var(--text-dim)}
+.modal .close-x:hover{color:var(--text)}
+
+/* ── Cookie banner ── */
+.cookie-banner{position:fixed;bottom:16px;left:16px;right:16px;max-width:520px;margin:0 auto;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);z-index:55;display:none}
+.cookie-banner.show{display:block}
+.cookie-banner h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+.cookie-banner p{font-size:12.5px;color:var(--text-mute);margin:0 0 12px}
+.cookie-banner p a{text-decoration:underline}
+.cookie-banner .actions{display:flex;gap:8px;flex-wrap:wrap}
+.cookie-banner .actions .btn{padding:8px 14px;font-size:13px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--accent);color:var(--text);padding:12px 20px;border-radius:30px;font-size:13.5px;box-shadow:var(--shadow);z-index:70;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius);padding:36px;text-align:center;color:var(--text-mute)}
+.empty h3{margin:0 0 6px;color:var(--text);font-size:16px}
+.empty p{margin:0 0 16px;font-size:13.5px}
+.hint-banner{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text-dim);margin-bottom:18px}
+.hint-banner b{color:var(--text)}
+.guest-overlay{background:var(--bg);position:fixed;inset:0;z-index:65;display:flex;align-items:center;justify-content:center;padding:20px}
+
+@media (max-width:1024px){ .upload-grid,.settings-grid{grid-template-columns:1fr} }
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:-260px;top:0;width:240px;transition:left .25s;box-shadow:var(--shadow)}
+  .sidebar.open{left:0}
+  .mobile-bar{display:flex}
+  .main{padding:18px 16px 160px}
+  .hero{padding:24px 18px}
+  .hero .av{width:96px;height:96px;flex-basis:96px;font-size:38px}
+  .player .inner{grid-template-columns:1fr auto;gap:10px;padding:10px 14px}
+  .player .right{display:none}
+  .player .controls .progress{display:none}
+  .track-row{grid-template-columns:28px 1fr auto;gap:10px}
+  .track-row .plays,.track-row .acts{display:none}
+  .field-row{grid-template-columns:1fr}
+  .landing header{padding:18px 20px}
+}
+@media (max-width:480px){
+  .grid-tracks{grid-template-columns:repeat(2,1fr)}
+  .grid-artists{grid-template-columns:repeat(2,1fr)}
+  .modal .share-grid{grid-template-columns:repeat(2,1fr)}
+  .landing .stats{gap:24px}
+}
+
+/* ── Bottoni Aura ── */
+.btn-aura{background:linear-gradient(135deg,#ffd166,#ff7eb6);color:#1a0b3d;border-color:transparent;box-shadow:0 8px 20px -8px rgba(255,209,102,.6);font-weight:600}
+.btn-aura:hover{filter:brightness(1.08) saturate(1.1)}
+.btn-voted{background:linear-gradient(135deg,#7afcd6,#5ef0e8);color:#1a0b3d;border-color:transparent;font-weight:700}
+
+/* ── Profilo artista professionale ── */
+.artist-pro{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:26px;box-shadow:var(--shadow)}
+.ap-cover{height:140px;background:linear-gradient(135deg,#ff7eb6,#a26bff,#5ef0e8);position:relative}
+.ap-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,10,46,.1),rgba(15,10,46,.55))}
+.ap-body{padding:0 32px 24px;display:flex;gap:24px;align-items:flex-start;position:relative;flex-wrap:wrap}
+.ap-av{width:120px;height:120px;border-radius:50%;flex:0 0 120px;display:grid;place-items:center;font-size:48px;font-weight:800;color:#1a0b3d;margin-top:-60px;border:4px solid var(--surface);box-shadow:0 18px 40px -14px rgba(0,0,0,.7);position:relative;z-index:2}
+.ap-head{flex:1;min-width:240px}
+.ap-verified{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 4px}
+.vpill{background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;padding:3px 10px;border-radius:30px;border:1px solid rgba(255,126,182,.5)}
+.ap-head h1{margin:4px 0 12px;font-size:30px;letter-spacing:-.5px}
+.ap-stats{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:14px}
+.ap-stats .stat{display:flex;flex-direction:column}
+.ap-stats .stat b{font-size:22px;font-weight:800}
+.ap-stats .stat span{font-size:11.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.5px}
+.ap-stats .stat.aura b{color:var(--sun)}
+.ap-bio{color:var(--text-dim);max-width:680px;font-size:14.5px;margin-bottom:16px;line-height:1.6}
+.ap-acts{display:flex;gap:10px;flex-wrap:wrap}
+.ap-social{padding:0 32px 28px}
+.ap-sh{font-size:11.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;font-weight:700}
+.social-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.social-badge{display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--text);text-decoration:none;transition:transform .15s,border-color .15s,background .15s}
+.social-badge:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--surface-3);text-decoration:none}
+.social-badge .sic{font-size:22px;width:36px;height:36px;border-radius:10px;background:var(--accent-soft);display:grid;place-items:center}
+.social-badge .sinfo{display:flex;flex-direction:column;flex:1}
+.social-badge .sinfo b{font-size:13.5px}
+.social-badge .sfl{font-size:11.5px;color:var(--text-mute)}
+.social-badge .scount{font-size:13px;font-weight:800;color:var(--accent)}
+.ap-social-total{margin-top:14px;font-size:13px;color:var(--text-mute)}
+.ap-social-total b{color:var(--text);font-weight:700}
+
+/* ── Match / Aura Battle ── */
+.match-create{background:linear-gradient(135deg,rgba(255,209,102,.10),rgba(255,126,182,.10));border:1px solid rgba(255,209,102,.35);border-radius:16px;padding:22px;margin-bottom:26px}
+.mc-title{font-size:17px;font-weight:700;margin-bottom:6px}
+.mc-desc{font-size:13.5px;color:var(--text-dim);margin-bottom:16px}
+.mc-form{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mc-sel{flex:1;min-width:180px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);padding:11px 14px;border-radius:10px;font-size:14px}
+.vs{font-weight:800;color:var(--sun);font-size:16px;letter-spacing:1px}
+.match-list{display:flex;flex-direction:column;gap:18px;margin-bottom:30px}
+.match-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.match-card.mcl{opacity:.92}
+.mc-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.mc-status{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:30px;text-transform:uppercase;letter-spacing:.5px}
+.mc-status.open{background:rgba(255,209,102,.18);color:var(--sun);border:1px solid rgba(255,209,102,.5)}
+.mc-status.closed{background:rgba(122,252,214,.16);color:var(--mint);border:1px solid rgba(122,252,214,.5)}
+.mc-time{font-size:12.5px;color:var(--text-dim);font-weight:600}
+.mc-vs{display:grid;grid-template-columns:1fr 160px 1fr;gap:14px;padding:22px}
+.mc-side{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;transition:opacity .2s}
+.mc-side.lost{opacity:.5}
+.mc-side.won{filter:saturate(1.15)}
+.mc-av{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:30px;font-weight:800;color:#1a0b3d;margin-bottom:4px;box-shadow:0 14px 30px -12px rgba(0,0,0,.7)}
+.mc-side.voted .mc-av{box-shadow:0 0 0 3px var(--sun),0 14px 30px -12px rgba(255,209,102,.6)}
+.mc-name{font-weight:700;font-size:15.5px}
+.mc-genre{font-size:11.5px;color:var(--text-mute)}
+.mc-votes{display:flex;flex-direction:column;align-items:center;margin:6px 0}
+.mc-votes b{font-size:22px;font-weight:800;color:var(--sun)}
+.mc-votes span{font-size:11px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.5px}
+.mc-won{font-weight:800;color:var(--mint);font-size:14px;padding:6px 12px;background:rgba(122,252,214,.16);border-radius:30px;border:1px solid rgba(122,252,214,.5)}
+.mc-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.vs-big{font-size:24px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#ff7eb6,#a26bff,#5ef0e8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mc-bar{width:100%;height:10px;border-radius:6px;overflow:hidden;display:flex;background:var(--surface-3)}
+.bfa{background:linear-gradient(90deg,#ff7eb6,#ffd166);transition:width .4s}
+.bfb{background:linear-gradient(90deg,#5ef0e8,#a26bff);transition:width .4s}
+.mc-pct{font-size:11.5px;color:var(--text-mute);font-weight:600}
+
+/* ── Leaderboard ── */
+.leaderboard{display:flex;flex-direction:column;gap:8px;margin-bottom:30px}
+.lb-row{display:grid;grid-template-columns:48px 52px 1fr auto auto auto auto;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;transition:transform .15s,border-color .15s}
+.lb-row:hover{transform:translateY(-1px);border-color:var(--line-2)}
+.lb-row.top1{border-color:rgba(255,209,102,.6);background:linear-gradient(135deg,rgba(255,209,102,.08),var(--surface))}
+.lb-row.top2{border-color:rgba(192,192,192,.5)}
+.lb-row.top3{border-color:rgba(205,127,50,.5)}
+.lb-rank{font-size:18px;font-weight:800;text-align:center;color:var(--text-dim)}
+.lb-av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#1a0b3d}
+.lb-name{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lb-name b{font-size:15px}
+.lb-metric{display:flex;flex-direction:column;align-items:center;min-width:64px}
+.lb-metric b{font-size:15px;font-weight:700}
+.lb-metric span{font-size:10.5px;color:var(--text-mute);text-transform:uppercase;letter-spacing:.4px}
+.lb-metric.aura b{color:var(--sun)}
+
+/* ── Guest wrap (voto pubblico senza login) ── */
+.guest-wrap{max-width:980px;margin:0 auto;padding:24px 18px 120px}
+.guest-brand{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.guest-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.guest-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;text-align:center;margin-bottom:26px;box-shadow:var(--shadow)}
+.guest-card h1{font-size:24px;margin-bottom:10px;background:linear-gradient(135deg,#ff7eb6,#ffd166,#5ef0e8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.g-sub{color:var(--text-dim);font-size:14px;max-width:600px;margin:0 auto 18px;line-height:1.6}
+.guest-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.guest-hero{text-align:center;padding:24px;margin-bottom:26px;background:linear-gradient(135deg,rgba(255,126,182,.10),rgba(94,240,232,.08));border-radius:16px;border:1px solid var(--line)}
+.guest-hero h1{font-size:26px;margin-bottom:8px}
+.guest-hero p{color:var(--text-dim);max-width:580px;margin:0 auto 16px;font-size:14px}
+.guest-tracks{display:flex;flex-direction:column;gap:10px}
+.gt-row{display:grid;grid-template-columns:54px 1fr auto auto auto;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.gt-cover{width:54px;height:54px;border-radius:10px;display:grid;place-items:center;font-size:22px;color:rgba(255,255,255,.5)}
+.gt-info{display:flex;flex-direction:column;min-width:0}
+.gt-info b{font-size:14.5px}
+.gby{font-size:12.5px;color:var(--text-mute)}
+.gt-aura{display:flex;flex-direction:column;align-items:center;min-width:56px}
+.gt-aura b{font-size:17px;font-weight:800;color:var(--sun)}
+.gt-aura span{font-size:10px;color:var(--text-mute);text-transform:uppercase}
+
+/* ── Match responsive ── */
+@media (max-width:760px){
+  .mc-vs{grid-template-columns:1fr;gap:18px;padding:18px}
+  .mc-center{order:2}
+  .lb-row{grid-template-columns:36px 40px 1fr auto;gap:8px}
+  .lb-row .lb-metric:nth-child(n+4){display:none}
+  .ap-body{padding:0 18px 18px}
+  .ap-av{width:90px;height:90px;font-size:36px;margin-top:-45px;flex:0 0 90px}
+  .ap-social{padding:0 18px 22px}
+  .ap-head h1{font-size:24px}
+  .ap-stats{gap:18px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Player bar (fixed) -->
+<div class="player" id="player" style="display:none">
+  <div class="inner">
+    <div class="info">
+      <div class="cover" id="pl-cover">🎵</div>
+      <div class="meta">
+        <b id="pl-title">Nessun brano in riproduzione</b>
+        <span id="pl-artist">Seleziona un brano per iniziare</span>
+        <div class="model" id="pl-model"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="btns">
+        <button id="pl-shuffle" title="Casuale">🔀</button>
+        <button id="pl-prev" title="Precedente">⏮️</button>
+        <button class="play" id="pl-play" title="Play/Pausa">▶️</button>
+        <button id="pl-next" title="Successivo">⏭️</button>
+        <button id="pl-like" class="like" title="Mi piace">🤍</button>
+      </div>
+      <div class="progress">
+        <span id="pl-cur">0:00</span>
+        <div class="bar" id="pl-bar"><div class="fill" id="pl-fill"></div></div>
+        <span id="pl-tot">0:00</span>
+      </div>
+    </div>
+    <div class="right">
+      <button id="pl-queue" title="Coda">📜</button>
+      <button id="pl-share" title="Condividi">↗️</button>
+      <span>🔊</span>
+      <div class="vol" id="pl-vol"><div class="fill" id="pl-vol-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Share modal -->
+<div class="modal" id="share-modal">
+  <div class="box">
+    <button class="close-x" id="share-close">✕</button>
+    <h2>Condividi "<span id="share-track">Brano</span>"</h2>
+    <p>Link con anteprima audio, metadati e catena creativa dell'artista.</p>
+    <div class="share-grid">
+      <button data-share="copy"><span class="ic">🔗</span> Copia link</button>
+      <button data-share="embed"><span class="ic">🧩</span> Embed</button>
+      <button data-share="tweet"><span class="ic">🐦</span> X</button>
+      <button data-share="wa"><span class="ic">💬</span> WhatsApp</button>
+    </div>
+    <div class="copy"><input id="share-url" type="text" readonly><button id="copy-btn">Copia</button></div>
+  </div>
+</div>
+
+<!-- Cookie banner -->
+<div class="cookie-banner" id="cookie-banner">
+  <h3>🍪 Cookie e tecnologie simili</h3>
+  <p>Usiamo solo cookie tecnici necessari al funzionamento (sessione, preferenze). Niente cookie di tracciamento o profilazione, niente pubblicità, niente profilazione. Puoi accettare tutti o solo i necessari. Leggi la <a href="#" onclick="go('legal/cookie');return false">Cookie Policy</a>.</p>
+  <div class="actions">
+    <button class="btn btn-primary" id="cookie-accept">Accetta tutti</button>
+    <button class="btn" id="cookie-essential">Solo necessari</button>
+    <button class="btn btn-ghost" id="cookie-manage">Gestisci</button>
+  </div>
+</div>
+
+<!-- Report modal -->
+<div class="modal" id="report-modal">
+  <div class="box">
+    <button class="close-x" id="report-close">✕</button>
+    <h2>Segnala contenuto</h2>
+    <p>Le segnalazioni sono gestite secondo il <b>Regolamento DSA (UE) 2022/2065</b>. La piattaforma risponde entro 7 giorni. False segnalazioni sono sanzionate.</p>
+    <div class="field"><label>Motivo</label><select id="report-reason"><option>Violazione copyright</option><option>Contenuto illecito</option><option>Contenuto discriminatorio o d'odio</option><option>Dichiarazione AI falsa o mancante</option><option>Altro</option></select></div>
+    <div class="field"><label>Descrizione (obbligatoria)</label><textarea id="report-desc" placeholder="Spiega brevemente il motivo della segnalazione"></textarea></div>
+    <div class="field"><label>La tua email (facoltativa)</label><input type="email" id="report-email" placeholder="Per ricevere l'esito"></div>
+    <button class="btn btn-primary" id="report-submit" style="width:100%">Invia segnalazione</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   AURA PLATFORM — versione navigabile, conforme GDPR
+   Stato in localStorage, audio reale (Web Audio + IndexedDB),
+   password hashate (SubtleCrypto SHA-256 + salt), consensi espliciti.
+   ════════════════════════════════════════════════════════════
+   */
+"use strict";
+
+/* ── Crypto: password hashing (SHA-256 + salt, SubtleCrypto) ── */
+async function hashPassword(pw, salt){ const enc=new TextEncoder(); const data=enc.encode(salt+":"+pw); const buf=await crypto.subtle.digest("SHA-256", data); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join(""); }
+function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join(""); }
+function genId(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ── Stato persistente ── */
+const STORE_KEY="aura_platform_v1";
+function defaultState(){ return { users:{}, currentUserId:null, profiles:{}, tracks:{}, playlists:{}, likes:[], follows:[], activeGenre:null, openPlaylistId:null, consents:{}, reports:[], cookieChoice:null, audit:[], auraVotes:{}, guestVotes:{}, matches:[], matchHistory:[] }; }
+function loadState(){ try { return JSON.parse(localStorage.getItem(STORE_KEY))||defaultState(); } catch(e){ return defaultState(); } }
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state=loadState();
+function audit(action, detail){ state.audit.push({t:Date.now(), action, detail:detail||"", userId:state.currentUserId||null}); if(state.audit.length>200) state.audit.shift(); }
+
+/* ── Seed: artisti e brani demo (audio sintetizzato) ── */
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function ensureSeed(){
+  if(Object.keys(state.tracks).length) return;
+  const artists=[
+    {id:"a1", name:"Lumen", genre:"Ambient", bio:"Progetto generativo: drone e ambient da prompt testuali lunghi. Dichiara sempre modello e prompt. Curatrice di rischi sonori e pause che respirano.", color:"#5ef0e8",
+     social:{ instagram:"lumen.ambient", tiktok:"@lumen.drone", youtube:"lumen-ambient", spotify:"6lumen", soundcloud:"lumen-ai"}, cover:"#7afcd6"},
+    {id:"a2", name:"Kō",    genre:"Lo-fi",   bio:"Beatmaker ibrida: campiona se stessa, poi rigenera varianti con Suno. Trasparenza totale nella catena. Vinile digitale, niente segreti.", color:"#ffd166",
+     social:{ instagram:"ko.lofi", tiktok:"@ko.beats", youtube:"ko-lofi", spotify:"4kobeats", soundcloud:"ko-lofi"}, cover:"#ffd166"},
+    {id:"a3", name:"Vega3", genre:"Synthwave", bio:"Duo che ricrea i suoni degli anni '80 con modelli AI su synth analogici. Licenza CC BY-NC. Magnete per nostalgia.", color:"#ff7eb6",
+     social:{ instagram:"vega3.synth", tiktok:"@vega3", youtube:"vega3-synthwave", spotify:"3vega3", soundcloud:"vega3"}, cover:"#ff7eb6"},
+  ];
+  artists.forEach(a=>state.profiles[a.id]=a);
+  const seeds=[
+    {id:"s1", artistId:"a1", title:"Lumen Suite",   genre:"Ambient",   prompt:"ambient drone, granular, C minor, slow evolution", model:"AIVA Pro",  durSec:30, isAI:true, color:"#5ef0e8"},
+    {id:"s2", artistId:"a2", title:"Tokyo Rain",    genre:"Lo-fi",     prompt:"lofi hip hop, rainy tokyo night, mellow, vinyl crackle", model:"Suno v4.5", durSec:24, isAI:true, color:"#ffd166"},
+    {id:"s3", artistId:"a3", title:"Midnight Drift",genre:"Synthwave", prompt:"80s synthwave, retro-futuristic, arpeggio, reverb", model:"Udio v1.5", durSec:28, isAI:true, color:"#ff7eb6"},
+    {id:"s4", artistId:"a1", title:"Hollow Field",  genre:"Ambient",   prompt:"ambient field, drone, wind, sparse piano", model:"AIVA Pro",  durSec:32, isAI:true, color:"#a26bff"},
+    {id:"s5", artistId:"a2", title:"After Hours",   genre:"Lo-fi",     prompt:"lofi, jazzy chords, late night", model:"Suno v4.5", durSec:22, isAI:true, color:"#7afcd6"},
+    {id:"s6", artistId:"a3", title:"Estate '85",     genre:"Synthwave", prompt:"italian synthwave, summer, nostalgic", model:"Udio v1.5", durSec:26, isAI:true, color:"#ff5d8f"},
+  ];
+  seeds.forEach(t=>state.tracks[t.id]={...t, type:"seed", plays:0, createdAt:Date.now(), license:"CC BY 4.0"});
+  state.playlists={ p1:{id:"p1", name:"Tarda sera AI", trackIds:["s1","s4","s2"], emoji:"🌙"}, p2:{id:"p2", name:"Beat per studiare", trackIds:["s2","s5"], emoji:"🎯"} };
+  // Follower social (dati demo realistici)
+  state.socialStats={
+    a1:{instagram:4820, tiktok:12900, youtube:3100, spotify:8700, soundcloud:5400},
+    a2:{instagram:11200, tiktok:33500, youtube:8900, spotify:24600, soundcloud:12100},
+    a3:{instagram:6700, tiktok:21400, youtube:5400, spotify:15800, soundcloud:9800}
+  };
+  // Aura totali iniziali per artista (brano × voti demo)
+  state.auraVotes={
+    s1:142, s2:318, s3:267, s4:88, s5:201, s6:184
+  };
+  // Match esistenti (alcuni già conclusi, uno in corso)
+  state.matches=[
+    {id:"m1", a:"a2", b:"a3", status:"open", createdAt:Date.now()-86400000, endsAt:Date.now()+43200000, votesA:0, votesB:0},
+    {id:"m2", a:"a1", b:"a3", status:"open", createdAt:Date.now()-7200000, endsAt:Date.now()+64800000, votesA:0, votesB:0},
+    {id:"m3", a:"a1", b:"a2", status:"closed", createdAt:Date.now()-172800000, endsAt:Date.now()-86400000, votesA:96, votesB:118, winner:"a2"}
+  ];
+  state.matchHistory=[];
+  saveState();
+}
+ensureSeed();
+
+/* ── IndexedDB per i blob audio ── */
+let db=null;
+function openDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open("aura_audio_db",1); r.onupgradeneeded=()=>r.result.createObjectStore("audio",{keyPath:"id"}); r.onsuccess=()=>{db=r.result;res(db);}; r.onerror=()=>rej(r.error); }); }
+function putBlob(id,blob){ return new Promise((res,rej)=>{ const tx=db.transaction("audio","readwrite"); tx.objectStore("audio").put({id,blob}); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+function getBlob(id){ return new Promise((res,rej)=>{ const tx=db.transaction("audio","readonly"); const q=tx.objectStore("audio").get(id); q.onsuccess=()=>res(q.result?q.result.blob:null); q.onerror=()=>rej(q.error); }); }
+function delBlob(id){ return new Promise((res)=>{ try{ const tx=db.transaction("audio","readwrite"); tx.objectStore("audio").delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>res(); }catch(e){ res(); } }); }
+openDB().catch(e=>console.warn("IndexedDB non disponibile:", e));
+
+/* ── Motore audio (Web Audio) ── */
+let audioCtx=null, currentSource=null, currentGain=null, currentBuffer=null;
+let loadedTrackId=null, isPlaying=false, startTime=0, offset=0, rafId=null;
+let queue=[], queueIdx=-1;
+function ensureCtx(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); return audioCtx; }
+function synthBuffer(ctx, trackId, durSec){
+  const sr=ctx.sampleRate, len=Math.max(1,Math.floor(durSec*sr));
+  const buf=ctx.createBuffer(2,len,sr);
+  const h=hashStr(trackId), root=110*Math.pow(2,(h%12)/12), scale=[0,3,5,7,10], bpm=72+(h%36), beat=60/bpm, noteDur=beat*0.5;
+  let seed=h; const rnd=()=>{ seed=(Math.imul(seed,1664525)+1013904223)>>>0; return seed/0xffffffff; };
+  for(let ch=0;ch<2;ch++){
+    const data=buf.getChannelData(ch); let pos=0;
+    while(pos<len){ const oct=(rnd()<0.22?1:0), deg=scale[Math.floor(rnd()*scale.length)], semi=deg+12*oct, freq=root*Math.pow(2,semi/12), thisDur=noteDur*(rnd()<0.18?2:1), n=Math.floor(thisDur*sr); for(let i=0;i<n&&pos<len;i++){ const tt=i/sr, env=Math.exp(-3.0*tt)*(1-Math.exp(-80*tt)), phase=2*Math.PI*freq*tt, wave=Math.sin(phase)+0.3*Math.sin(2*phase)+0.12*Math.sin(3*phase), stereo=ch===0?1.0:0.92; data[pos]+=wave*env*0.16*stereo; pos++; } }
+    for(let i=0;i<len;i++){ const tt=i/sr, pad=Math.sin(2*Math.PI*root*tt)*0.035*(0.55+0.45*Math.sin(2*Math.PI*0.08*tt)); data[i]+=pad; }
+  }
+  return buf;
+}
+async function loadTrackAudio(track){ const ctx=ensureCtx(); if(track.type==="seed") return synthBuffer(ctx, track.id, track.durSec); try{ const blob=await getBlob(track.id); if(!blob) return null; const arr=await blob.arrayBuffer(); return await ctx.decodeAudioData(arr); }catch(e){ console.warn("decode fallito",e); return null; } }
+function startSource(off){ offset=Math.max(0,off); currentSource=audioCtx.createBufferSource(); currentSource.buffer=currentBuffer; currentGain=audioCtx.createGain(); currentGain.gain.value=0.8; currentSource.connect(currentGain).connect(audioCtx.destination); currentSource.onended=()=>{ if(isPlaying) onTrackEnded(); }; startTime=audioCtx.currentTime; try{ currentSource.start(0,offset); }catch(e){} isPlaying=true; }
+function stopCurrent(){ if(currentSource){ try{currentSource.onended=null;currentSource.stop();}catch(e){} currentSource=null; } if(currentGain){ try{currentGain.disconnect();}catch(e){} currentGain=null; } isPlaying=false; cancelProgress(); }
+async function loadAndPlay(trackId, q){
+  const track=state.tracks[trackId]; if(!track) return;
+  if(q&&q.length){ queue=q.slice(); queueIdx=queue.indexOf(trackId); if(queueIdx<0){ queue.unshift(trackId); queueIdx=0; } } else if(!queue.length){ queue=[trackId]; queueIdx=0; } else { queueIdx=queue.indexOf(trackId); if(queueIdx<0){ queue=[trackId]; queueIdx=0; } }
+  stopCurrent(); ensureCtx(); currentBuffer=await loadTrackAudio(track);
+  if(!currentBuffer){ toast("Audio non disponibile per questo brano."); return; }
+  loadedTrackId=trackId; track.plays=(track.plays||0)+1; audit("play", trackId); saveState();
+  startSource(0); updatePlayerUI(); startProgress();
+}
+function togglePlay(){ if(!loadedTrackId){ const ids=allTrackIds(); if(ids.length) loadAndPlay(ids[0], ids); return; } if(isPlaying){ offset+=audioCtx.currentTime-startTime; if(currentSource){ try{currentSource.onended=null;currentSource.stop();}catch(e){} currentSource=null; } if(currentGain){ try{currentGain.disconnect();}catch(e){} currentGain=null; } isPlaying=false; cancelProgress(); updatePlayerUI(); } else { if(offset>=currentBuffer.duration-0.05) offset=0; startSource(offset); updatePlayerUI(); startProgress(); } }
+function onTrackEnded(){ if(queueIdx<queue.length-1) loadAndPlay(queue[++queueIdx]); else { stopCurrent(); loadedTrackId=null; offset=0; updatePlayerUI(); } }
+function nextTrack(){ if(queue.length&&queueIdx<queue.length-1) loadAndPlay(queue[++queueIdx]); else if(loadedTrackId) loadAndPlay(loadedTrackId); }
+function prevTrack(){ if(!loadedTrackId) return; const elapsed=isPlaying?(audioCtx.currentTime-startTime+offset):offset; if(elapsed>3){ if(isPlaying){ stopCurrent(); currentBuffer&&startSource(0); } else { offset=0; updatePlayerUI(); } } else if(queueIdx>0) loadAndPlay(queue[--queueIdx]); else { if(isPlaying){ stopCurrent(); startSource(0); } else { offset=0; updatePlayerUI(); } } }
+function seek(frac){ if(!loadedTrackId||!currentBuffer) return; const off=Math.max(0,Math.min(currentBuffer.duration-0.01,frac*currentBuffer.duration)); if(isPlaying){ if(currentSource){ try{currentSource.onended=null;currentSource.stop();}catch(e){} currentSource=null; } startSource(off); } else { offset=off; } updatePlayerUI(); }
+function startProgress(){ cancelProgress(); rafId=requestAnimationFrame(tick); }
+function tick(){ if(!isPlaying||!currentBuffer) return; const elapsed=(audioCtx.currentTime-startTime)+offset; updateProgressBar(elapsed,currentBuffer.duration); rafId=requestAnimationFrame(tick); }
+function cancelProgress(){ if(rafId){ cancelAnimationFrame(rafId); rafId=null; } }
+
+/* ── Helpers ── */
+function allTrackIds(){ return Object.keys(state.tracks); }
+function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60),sec=s%60; return m+":"+(sec<10?"0":"")+sec; }
+function trackById(id){ return state.tracks[id]; }
+function artistById(id){ return state.profiles[id]; }
+function isLiked(id){ return state.likes.includes(id); }
+function isFollowing(id){ return state.follows.includes(id); }
+function currentUser(){ return state.currentUserId?state.users[state.currentUserId]:null; }
+function myProfileId(){ const u=currentUser(); return u?u.profileId:null; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2400); }
+function uniqueGenres(){ const s=new Set(); Object.values(state.tracks).forEach(t=>s.add(t.genre)); return [...s].sort(); }
+function toggleLike(id){ const i=state.likes.indexOf(id); if(i>=0) state.likes.splice(i,1); else state.likes.push(id); audit(state.likes.includes(id)?"like":"unlike", id); saveState(); updatePlayerUI(); rerender(); }
+function toggleFollow(id){ const i=state.follows.indexOf(id); if(i>=0) state.follows.splice(i,1); else state.follows.push(id); saveState(); rerender(); }
+
+/* ── Aura vote: sistema votazione pubblica (anche guest) ── */
+function guestFingerprint(){
+  // Fingerprint grezzo, persistente via localStorage: combina user-agent + random install
+  let fp=localStorage.getItem("aura_guest_fp");
+  if(!fp){ fp="g_"+Math.random().toString(36).slice(2,10)+"_"+Date.now().toString(36); localStorage.setItem("aura_guest_fp", fp); }
+  return fp;
+}
+function auraCount(trackId){ return state.auraVotes[trackId]||0; }
+function artistAura(artistId){
+  // Somma Aura di tutti i brani dell'artista
+  return Object.values(state.tracks).filter(t=>t.artistId===artistId).reduce((s,t)=>s+auraCount(t.id),0);
+}
+function artistFollowerCount(artistId){
+  // Follower totali sui social (demo) + follower interni
+  const s=state.socialStats&&state.socialStats[artistId]||{};
+  const ext=Object.values(s).reduce((a,b)=>a+(b||0),0);
+  const int=Object.values(state.profiles).filter(p=>p.userId&&state.follows.includes(artistId)).length;
+  return ext+int;
+}
+function canVoteGuest(trackId){
+  const fp=guestFingerprint();
+  const key=fp+":"+trackId;
+  const last=state.guestVotes[key];
+  if(!last) return true;
+  // 1 voto per brano per fingerprint (revocabile rivotando)
+  return false;
+}
+function hasVotedAura(trackId){
+  const fp=guestFingerprint();
+  if(state.currentUserId){
+    const key="u:"+state.currentUserId+":"+trackId;
+    return !!state.guestVotes[key];
+  }
+  const key=fp+":"+trackId;
+  return !!state.guestVotes[key];
+}
+function voteAura(trackId){
+  if(!state.tracks[trackId]) return;
+  const fp=guestFingerprint();
+  const key=(state.currentUserId?"u:"+state.currentUserId+":":fp+":")+trackId;
+  if(state.guestVotes[key]){
+    // Revoca voto
+    state.auraVotes[trackId]=Math.max(0,(state.auraVotes[trackId]||0)-1);
+    delete state.guestVotes[key];
+    audit("aura_unvote", trackId);
+    toast("Aura rimossa");
+  } else {
+    state.auraVotes[trackId]=(state.auraVotes[trackId]||0)+1;
+    state.guestVotes[key]=Date.now();
+    audit("aura_vote", trackId);
+    // Assegna Aura anche all'artista (trasparenza catena)
+    toast("✨ +1 Aura");
+  }
+  saveState(); rerender(); updatePlayerUI();
+}
+
+/* ── Social links: icone + URL ── */
+const SOCIAL_META={
+  instagram:{label:"Instagram", icon:"📷", url:h=>"https://instagram.com/"+h},
+  tiktok:   {label:"TikTok", icon:"🎵", url:h=>"https://tiktok.com/"+h},
+  youtube:  {label:"YouTube", icon:"▶", url:h=>"https://youtube.com/@"+h},
+  spotify:  {label:"Spotify", icon:"🎧", url:h=>"https://open.spotify.com/artist/"+h},
+  soundcloud:{label:"SoundCloud", icon:"☁️", url:h=>"https://soundcloud.com/"+h}
+};
+function fmtFollowers(n){ if(n>=1e6) return (n/1e6).toFixed(1)+"M"; if(n>=1e3) return (n/1e3).toFixed(1)+"k"; return String(n); }
+
+/* ── Match / Aura Battle ── */
+function openMatches(){ return state.matches.filter(m=>m.status==="open" && m.endsAt>Date.now()); }
+function myAuraContribution(matchId, side){
+  const fp=guestFingerprint();
+  const key=(state.currentUserId?"u:"+state.currentUserId+":":fp+":")+"match:"+matchId+":"+side;
+  return !!state.guestVotes[key];
+}
+function voteMatch(matchId, side){
+  const m=state.matches.find(x=>x.id===matchId);
+  if(!m||m.status!=="open") return;
+  if(m.endsAt<Date.now()){ toast("Match concluso"); return; }
+  const fp=guestFingerprint();
+  const uid=state.currentUserId?"u:"+state.currentUserId+":":fp+":";
+  // Rimuovi eventuale voto precedente per questo match
+  ["a","b"].forEach(s=>{ delete state.guestVotes[uid+"match:"+matchId+":"+s]; });
+  if(side!==null){
+    state.guestVotes[uid+"match:"+matchId+":"+side]=Date.now();
+    toast("✨ Voto Aura registrato per "+(artistById(m[side])?artistById(m[side]).name:"?"));
+  } else {
+    toast("Voto rimosso");
+  }
+  saveState(); rerender();
+}
+function matchVoteCounts(m){
+  const fp=guestFingerprint();
+  const uid=state.currentUserId?"u:"+state.currentUserId+":":fp+":";
+  // Conta voti per lato (per guest fp corrente, conta 1; per loggati, +1)
+  // Per semplicità demo: voti totali = voti registrati (chiave per chiave)
+  let a=0,b=0;
+  Object.keys(state.guestVotes).forEach(k=>{
+    if(k.endsWith("match:"+m.id+":a")) a++;
+    if(k.endsWith("match:"+m.id+":b")) b++;
+  });
+  // Aggiungi Aura storica degli artisti (peso base)
+  a+=Math.floor(artistAura(m.a)/10)+m.votesA;
+  b+=Math.floor(artistAura(m.b)/10)+m.votesB;
+  return {a,b};
+}
+function createMatch(artistAId, artistBId){
+  if(artistAId===artistBId){ toast("Scegli due artisti diversi"); return; }
+  if(!artistById(artistAId)||!artistById(artistBId)){ toast("Artista non trovato"); return; }
+  const m={id:"m"+Date.now().toString(36), a:artistAId, b:artistBId, status:"open", createdAt:Date.now(), endsAt:Date.now()+86400000, votesA:0, votesB:0};
+  state.matches.unshift(m); if(state.matches.length>20) state.matches.pop();
+  audit("create_match", m.id); saveState(); rerender();
+  toast("⚔️ Match lanciato! 24h di votazione");
+}
+function resolveExpiredMatches(){
+  const now=Date.now();
+  state.matches.forEach(m=>{
+    if(m.status==="open" && m.endsAt<now){
+      const c=matchVoteCounts(m);
+      m.votesA=c.a; m.votesB=c.b;
+      m.winner = c.a>c.b?m.a : c.b>c.a?m.b : null;
+      m.status="closed";
+      state.matchHistory.unshift({id:m.id, a:m.a, b:m.b, votesA:c.a, votesB:c.b, winner:m.winner, endedAt:now});
+      if(state.matchHistory.length>30) state.matchHistory.pop();
+    }
+  });
+  saveState();
+}
+function activeMatchVote(matchId){
+  const fp=guestFingerprint();
+  const uid=state.currentUserId?"u:"+state.currentUserId+":":fp+":";
+  if(state.guestVotes[uid+"match:"+matchId+":a"]) return "a";
+  if(state.guestVotes[uid+"match:"+matchId+":b"]) return "b";
+  return null;
+}
+
+
+/* ── Routing ── */
+let route=parseHash();
+function parseHash(){ const h=location.hash.slice(1)||"landing"; const parts=h.split("/"); return {name:parts[0], arg:parts[1]||null}; }
+window.addEventListener("hashchange", ()=>{ route=parseHash(); rerender(); });
+function go(name, arg){ if(arg) location.hash=name+"/"+arg; else location.hash=name; }
+function rerender(){ route=parseHash(); render(route); }
+
+/* ── Render principale ── */
+function render(r){
+  const name=r.name;
+  // Viste pubbliche (senza login)
+  if(name==="landing"){ renderLanding(); hidePlayer(); return; }
+  if(name==="login"){ renderLogin(); hidePlayer(); return; }
+  if(name==="register"){ renderRegister(); hidePlayer(); return; }
+  if(name==="recover"){ renderRecover(); hidePlayer(); return; }
+  if(name==="legal"){ renderLegal(r.arg); hidePlayer(); return; }
+  if(name==="vote"){ renderGuestVote(r.arg); return; }   // guest può votare Aura sui brani
+  if(name==="match-public"){ renderMatchPublic(); return; } // guest può votare match
+  if(name==="artist-public"){ renderArtistPublic(r.arg); return; } // guest vede profilo artista
+  // Viste autenticate
+  if(!state.currentUserId){ go("landing"); return; }
+  if(name==="home"||name===""){ renderAppShell("home"); return; }
+  if(name==="browse"){ renderAppShell("browse"); return; }
+  if(name==="upload"){ renderAppShell("upload"); return; }
+  if(name==="library"){ renderAppShell("library"); return; }
+  if(name==="profile"){ renderAppShell("profile"); return; }
+  if(name==="settings"){ renderAppShell("settings"); return; }
+  if(name==="playlist"){ renderAppShell("playlist"); return; }
+  if(name==="match"){ renderAppShell("match", r.arg); return; }
+  if(name==="artist"){ renderAppShell("artist", r.arg); return; }
+  if(name==="track"){ renderAppShell("track", r.arg); return; }
+  go("home");
+}
+
+function hidePlayer(){ document.getElementById("player").style.display="none"; }
+function showPlayer(){ document.getElementById("player").style.display="block"; }
+
+/* ── Landing page ── */
+function renderLanding(){
+  document.getElementById("root").innerHTML = `
+  <div class="landing">
+    <header>
+      <div class="brand"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">PIATTAFORMA · ARTISTI AI</div></div></div>
+      <nav>
+        <a href="#legal/privacy">Privacy</a>
+        <a href="#legal/terms">Termini</a>
+        <a href="#legal/cookie">Cookie</a>
+        <button class="btn btn-ghost" onclick="go('login')">Accedi</button>
+        <button class="btn btn-primary" onclick="go('register')">Crea account</button>
+      </nav>
+    </header>
+    <div class="hero">
+      <div class="eyebrow">🎵 Trasparenza creativa · GDPR · DSA</div>
+      <h1>La casa degli artisti<br>di musica AI.</h1>
+      <p class="lead">Aura è la piattaforma dove gli artisti pubblicano musica generata con AI <b>dichiarando la catena creativa</b>: modello, prompt, strumentazione, licenza. Dati minimi per legge, responsabilità dei contenuti a carico degli artisti.</p>
+      <div class="cta">
+        <button class="btn btn-primary" onclick="go('register')">Inizia gratis</button>
+        <button class="btn btn-aura" onclick="go('vote')">✨ Vota gli artisti</button>
+        <button class="btn" onclick="go('match-public')">⚔️ Match in corso</button>
+        <button class="btn" onclick="go('login')">Ho già un account</button>
+      </div>
+      <div class="stats">
+        <div class="s"><div class="v">${Object.keys(state.tracks).length}+</div><div class="l">Brani AI</div></div>
+        <div class="s"><div class="v">${Object.keys(state.profiles).length}+</div><div class="l">Artisti</div></div>
+        <div class="s"><div class="v">100%</div><div class="l">Catena dichiarata</div></div>
+        <div class="s"><div class="v">GDPR</div><div class="l">Conforme UE</div></div>
+      </div>
+    </div>
+    <footer>
+      <div>© ${new Date().getFullYear()} Aura · Demo conforme GDPR/DSA · EU AI Act art.50</div>
+      <div class="links">
+        <a href="#legal/privacy">Privacy Policy</a>
+        <a href="#legal/terms">Termini</a>
+        <a href="#legal/cookie">Cookie Policy</a>
+        <a href="#legal/report">Segnalazioni</a>
+      </div>
+    </footer>
+  </div>`;
+}
+
+/* ── Login ── */
+function renderLogin(){
+  document.getElementById("root").innerHTML = `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand" onclick="go('landing')" style="cursor:pointer"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">PIATTAFORMA · ARTISTI AI</div></div></div>
+      <h1>Bentornato</h1>
+      <div class="sub">Accedi al tuo account artista.</div>
+      <div class="field" id="f-email"><label>Email</label><input type="email" id="login-email" placeholder="tu@esempio.com"><div class="error">Inserisci una email valida.</div></div>
+      <div class="field" id="f-pw"><label>Password</label><input type="password" id="login-pw" placeholder="Min. 8 caratteri"><div class="error">Password obbligatoria.</div></div>
+      <button class="btn btn-primary" id="login-submit" style="width:100%;margin-top:8px">Accedi</button>
+      <p style="text-align:right;color:var(--accent);font-size:13px;margin:10px 0 0"><a href="#" onclick="go('recover');return false" style="color:var(--accent)">Password dimenticata?</a></p>
+      <p style="text-align:center;color:var(--text-mute);font-size:13px;margin:16px 0 0">Non hai un account? <a href="#" onclick="go('register');return false">Registrati</a></p>
+      <p style="text-align:center;color:var(--text-mute);font-size:11.5px;margin:8px 0 0"><a href="#legal/privacy">Privacy</a> · <a href="#legal/terms">Termini</a> · Accesso trattato secondo GDPR art.6(1)(b)</p>
+    </div>
+  </div>`;
+  document.getElementById("login-submit").onclick = doLogin;
+  document.getElementById("login-pw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+}
+async function doLogin(){
+  const email=document.getElementById("login-email").value.trim().toLowerCase();
+  const pw=document.getElementById("login-pw").value;
+  document.getElementById("f-email").classList.toggle("invalid", !validEmail(email));
+  document.getElementById("f-pw").classList.toggle("invalid", !pw);
+  if(!validEmail(email)||!pw) return;
+  const user=Object.values(state.users).find(u=>u.email===email);
+  if(!user){ toast("Nessun account con questa email."); return; }
+  const hash=await hashPassword(pw, user.salt);
+  if(hash!==user.pwHash){ toast("Credenziali non valide."); return; }
+  state.currentUserId=user.id; audit("login"); saveState();
+  toast("Bentornato, "+(state.profiles[user.profileId]?state.profiles[user.profileId].name:"artista")+"!");
+  go("home");
+}
+
+/* ── Recupero password con OTP via email (Cloudflare Worker + Resend) ── */
+// ⚙️ INSERISCI QUI L'URL del tuo Worker dopo il deploy (vedi worker/README-worker.md).
+// Lascia "" per usare la modalità demo locale (codice finto 123456) — utile in dev senza Worker.
+const AURA_MAIL_URL = "";
+
+function renderRecover(){
+  document.getElementById("root").innerHTML = `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand" onclick="go('landing')" style="cursor:pointer"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">RECUPERO PASSWORD</div></div></div>
+      <h1>Password dimenticata?</h1>
+      <div class="sub">Riceverai un codice a 6 cifre via email per reimpostare la password.</div>
+      <div class="hint-banner" style="margin-bottom:14px"><b>Sicurezza.</b> Le password sono hashate SHA-256+salt (irreversibili), per questo si reimpostano anziché recuperarle. Il codice OTP è validato dal server e scade in 10 minuti.</div>
+      ${AURA_MAIL_URL? '' : '<div class="hint-banner" style="margin-bottom:14px;background:rgba(255,209,102,.10);border-color:rgba(255,209,102,.4)"><b>Modalità demo locale.</b> Worker non configurato (AURA_MAIL_URL vuoto). Il codice <b>123456</b> funziona comunque per test. Per email reali: deploya il Worker (vedi <code>worker/README-worker.md</code>).</div>'}
+
+      <div class="field" id="f-email"><label>Email dell'account</label><input type="email" id="rec-email" placeholder="tu@esempio.com"><div class="error">Email non valida. Controlla o <a href="#" onclick="go('register');return false">registrati</a>.</div></div>
+
+      <div id="rec-step-otp" style="display:none">
+        <div class="field" id="f-code"><label>Codice ricevuto via email</label><input type="text" id="rec-code" placeholder="6 cifre" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" style="letter-spacing:6px;font-size:20px;font-family:monospace;text-align:center"><div class="error">Codice non valido (6 cifre).</div><div class="hint">Controlla la casella email. Scade in 10 minuti.</div></div>
+        <div class="field" id="f-pw"><label>Nuova password</label><input type="password" id="rec-pw" placeholder="Min. 8 caratteri"><div class="pw-strength"><div class="bar" id="rec-pw-bar"></div></div><div class="error">Minimo 8 caratteri.</div><div class="hint">Hashata con SHA-256 + nuovo salt.</div></div>
+        <div class="field" id="f-pw2"><label>Ripeti nuova password</label><input type="password" id="rec-pw2" placeholder="Uguale a sopra"><div class="error">Le password non coincidono.</div></div>
+      </div>
+
+      <button class="btn btn-primary" id="rec-submit" style="width:100%;margin-top:8px">Invia codice</button>
+      <button class="btn btn-ghost" id="rec-resend" style="width:100%;margin-top:8px;display:none">↻ Invia di nuovo il codice</button>
+      <p style="text-align:center;color:var(--text-mute);font-size:13px;margin:16px 0 0"><a href="#" onclick="go('login');return false">← Torna al login</a></p>
+    </div>
+  </div>`;
+  document.getElementById("rec-pw").addEventListener("input", updateRecPwStrength);
+  document.getElementById("rec-submit").onclick = doRecover;
+  document.getElementById("rec-resend").onclick = doRecoverSendCode;
+  document.getElementById("rec-code").addEventListener("keydown", e=>{ if(e.key==="Enter") doRecover(); });
+  document.getElementById("rec-pw2").addEventListener("keydown", e=>{ if(e.key==="Enter") doRecover(); });
+  window._recStage = "send"; // "send" → "verify"
+}
+function updateRecPwStrength(){
+  const pw=document.getElementById("rec-pw").value; const bar=document.getElementById("rec-pw-bar");
+  let s=0; if(pw.length>=8)s++; if(pw.length>=12)s++; if(/[A-Z]/.test(pw))s++; if(/[0-9]/.test(pw))s++; if(/[^A-Za-z0-9]/.test(pw))s++;
+  const pct=[0,20,40,60,80,100][s]; const col=[["#ff5d8f"],["#ff5d8f"],["#ffd166"],["#ffd166"],["#7afcd6"],["#7afcd6"]][s];
+  bar.style.width=pct+"%"; bar.style.background=col;
+}
+
+// Step 1: invia codice OTP via Worker
+async function doRecoverSendCode(){
+  const email=document.getElementById("rec-email").value.trim().toLowerCase();
+  const emailOk=validEmail(email);
+  document.getElementById("f-email").classList.toggle("invalid", !emailOk);
+  if(!emailOk) return;
+
+  const btn=document.getElementById("rec-submit"); btn.disabled=true; btn.textContent="Invio in corso…";
+  try {
+    if (AURA_MAIL_URL) {
+      const resp = await fetch(AURA_MAIL_URL + "/request-otp", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await resp.json();
+      if (!data.ok) { toast("❌ " + (data.error||"Errore invio codice")); btn.disabled=false; btn.textContent="Invia codice"; return; }
+      toast("✅ Codice inviato via email");
+    } else {
+      // Modalità demo: codice finto 123456 (Worker non configurato)
+      await new Promise(r=>setTimeout(r,400));
+      toast("✅ Codice demo inviato. Usa 123456 per test.");
+    }
+    // Passa allo step 2
+    window._recStage = "verify";
+    document.getElementById("rec-step-otp").style.display = "block";
+    btn.textContent = "Verifica codice e reimposta";
+    btn.disabled = false;
+    document.getElementById("rec-resend").style.display = "block";
+    document.getElementById("rec-code").focus();
+  } catch (e) {
+    toast("❌ Errore di rete: " + e.message);
+    btn.disabled=false; btn.textContent="Invia codice";
+  }
+}
+
+// Step 2: verifica codice OTP + reimposta password
+async function doRecover(){
+  if (window._recStage === "send") return doRecoverSendCode();
+  const email=document.getElementById("rec-email").value.trim().toLowerCase();
+  const code=document.getElementById("rec-code").value.trim();
+  const pw=document.getElementById("rec-pw").value;
+  const pw2=document.getElementById("rec-pw2").value;
+  const user=Object.values(state.users).find(u=>u.email===email);
+  const emailOk=validEmail(email)&&!!user;
+  document.getElementById("f-email").classList.toggle("invalid", !emailOk);
+  document.getElementById("f-code").classList.toggle("invalid", !/^\d{6}$/.test(code));
+  document.getElementById("f-pw").classList.toggle("invalid", pw.length<8);
+  document.getElementById("f-pw2").classList.toggle("invalid", pw!==pw2);
+  if(!emailOk||!/^\d{6}$/.test(code)||pw.length<8||pw!==pw2) return;
+
+  const btn=document.getElementById("rec-submit"); btn.disabled=true; btn.textContent="Verifica…";
+  try {
+    if (AURA_MAIL_URL) {
+      const resp = await fetch(AURA_MAIL_URL + "/verify-otp", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code })
+      });
+      const data = await resp.json();
+      if (!data.ok) { toast("❌ " + (data.error||"Codice non valido")); btn.disabled=false; btn.textContent="Verifica codice e reimposta"; return; }
+    } else {
+      // Modalità demo: codice 123456
+      await new Promise(r=>setTimeout(r,300));
+      if (code !== "123456") { toast("❌ In modalità demo, usa il codice 123456"); btn.disabled=false; btn.textContent="Verifica codice e reimposta"; document.getElementById("f-code").classList.add("invalid"); return; }
+    }
+    // Verifica OK: reimposta password
+    const salt=genSalt(), hash=await hashPassword(pw, salt);
+    user.salt=salt; user.pwHash=hash; user.pwUpdatedAt=Date.now();
+    audit("password_reset", user.id); saveState();
+    toast("✅ Password reimpostata. Ora puoi accedere.");
+    setTimeout(()=>go("login"), 700);
+  } catch (e) {
+    toast("❌ Errore di rete: " + e.message);
+    btn.disabled=false; btn.textContent="Verifica codice e reimposta";
+  }
+}
+async function changePasswordFromSettings(){
+  const pw=document.getElementById("set-pw").value;
+  const pw2=document.getElementById("set-pw2").value;
+  document.getElementById("set-pw-f").classList.toggle("invalid", pw.length<8);
+  document.getElementById("set-pw2-f").classList.toggle("invalid", pw!==pw2);
+  if(pw.length<8||pw!==pw2) return;
+  const u=currentUser(); if(!u) return;
+  const salt=genSalt(), hash=await hashPassword(pw, salt);
+  u.salt=salt; u.pwHash=hash; u.pwUpdatedAt=Date.now();
+  audit("password_change", u.id); saveState();
+  document.getElementById("set-pw").value=""; document.getElementById("set-pw2").value="";
+  toast("✅ Password aggiornata.");
+}
+window.changePasswordFromSettings=changePasswordFromSettings;
+
+/* ── Registrazione (GDPR: dati minimi, consensi espliciti, 16+, età verificata) ── */
+function renderRegister(){
+  document.getElementById("root").innerHTML = `
+  <div class="auth-wrap">
+    <div class="auth-card" style="max-width:520px">
+      <div class="brand" onclick="go('landing')" style="cursor:pointer"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">PIATTAFORMA · ARTISTI AI</div></div></div>
+      <h1>Crea il tuo account</h1>
+      <div class="sub">Solo i dati strettamente necessari. Conforme GDPR.</div>
+
+      <div class="field" id="r-name"><label>Nome artista *</label><input type="text" id="reg-name" placeholder="Es. Marta R."><div class="error">Inserisci un nome artista.</div><div class="hint">Sarà pubblico. Puoi cambiarlo in seguito.</div></div>
+      <div class="field" id="r-email"><label>Email *</label><input type="email" id="reg-email" placeholder="tu@esempio.com"><div class="error">Email non valida o già registrata.</div><div class="hint">Usata solo per accesso e notifiche essenziali. Non ceduta a terzi.</div></div>
+      <div class="field" id="r-pw"><label>Password *</label><input type="password" id="reg-pw" placeholder="Min. 8 caratteri"><div class="pw-strength"><div class="bar" id="pw-bar"></div></div><div class="error">Minimo 8 caratteri.</div><div class="hint">Hashata con SHA-256 + salt. Non salvata in chiaro.</div></div>
+
+      <div class="age-block" id="r-age">
+        <label><input type="checkbox" id="reg-age"><span class="txt">Dichiaro di avere <b>almeno 16 anni</b> (o l'età minima prevista nel mio Paese UE per il consenso ai servizi online senza genitore). *</span></label>
+      </div>
+
+      <div class="consent-block">
+        <div class="ct">Consenso al trattamento dei dati (GDPR art.6 §1 lit.a)</div>
+        <div class="consent-row required" id="r-c1">
+          <input type="checkbox" class="cb" id="reg-c1">
+          <div class="lbl">Ho letto e accetto i <a href="#legal/terms" target="_blank">Termini di servizio</a> e confermo di aver letto la <a href="#legal/privacy" target="_blank">Privacy Policy</a>. <b>*</b></div>
+        </div>
+        <div class="consent-row required" id="r-c2">
+          <input type="checkbox" class="cb" id="reg-c2">
+          <div class="lbl">Acconsento al trattamento dei dati minimi (email, nome artista, brani pubblicati) per fornire il servizio e rispettare obblighi di legge. <b>*</b> (necessario — senza questo consenso non possiamo attivare l'account)</div>
+        </div>
+        <div class="consent-row" id="r-c3">
+          <input type="checkbox" class="cb" id="reg-c3">
+          <div class="lbl">Acconsento a ricevere email tecniche (sicurezza account, modifiche al servizio). <span style="color:var(--text-mute)">(facoltativo)</span></div>
+        </div>
+        <div class="consent-row" id="r-c4">
+          <input type="checkbox" class="cb" id="reg-c4">
+          <div class="lbl">Acconsento alla profilazione minimale per suggerimenti musicali basati sui miei ascolti. <span style="color:var(--text-mute)">(facoltativo)</span></div>
+        </div>
+        <div class="consent-row" id="r-c5">
+          <input type="checkbox" class="cb" id="reg-c5">
+          <div class="lbl">Acconsento a cookie di analisi aggregata e anonimizzata per migliorare la piattaforma. <span style="color:var(--text-mute)">(facoltativo)</span></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="reg-submit" style="width:100%">Crea account</button>
+      <p style="text-align:center;color:var(--text-mute);font-size:13px;margin:14px 0 0">Hai già un account? <a href="#" onclick="go('login');return false">Accedi</a></p>
+      <p style="text-align:center;color:var(--text-mute);font-size:11px;margin:8px 0 0">I consensi facoltativi possono essere revocati in qualsiasi momento da <b>Impostazioni</b>.</p>
+    </div>
+  </div>`;
+  document.getElementById("reg-pw").addEventListener("input", updatePwStrength);
+  document.getElementById("reg-submit").onclick = doRegister;
+}
+function updatePwStrength(){
+  const pw=document.getElementById("reg-pw").value; const bar=document.getElementById("pw-bar");
+  let s=0; if(pw.length>=8)s++; if(pw.length>=12)s++; if(/[A-Z]/.test(pw))s++; if(/[0-9]/.test(pw))s++; if(/[^A-Za-z0-9]/.test(pw))s++;
+  const pct=[0,20,40,60,80,100][s]; const col=[["#ff5d8f"],["#ff5d8f"],["#ffd166"],["#ffd166"],["#7afcd6"],["#7afcd6"]][s];
+  bar.style.width=pct+"%"; bar.style.background=col;
+}
+function validEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+async function doRegister(){
+  const name=document.getElementById("reg-name").value.trim();
+  const email=document.getElementById("reg-email").value.trim().toLowerCase();
+  const pw=document.getElementById("reg-pw").value;
+  const age=document.getElementById("reg-age").checked;
+  const c1=document.getElementById("reg-c1").checked;
+  const c2=document.getElementById("reg-c2").checked;
+  const c3=document.getElementById("reg-c3").checked;
+  const c4=document.getElementById("reg-c4").checked;
+  const c5=document.getElementById("reg-c5").checked;
+  let ok=true;
+  if(!name){ document.getElementById("r-name").classList.add("invalid"); ok=false; } else document.getElementById("r-name").classList.remove("invalid");
+  if(!validEmail(email)||Object.values(state.users).some(u=>u.email===email)){ document.getElementById("r-email").classList.add("invalid"); ok=false; } else document.getElementById("r-email").classList.remove("invalid");
+  if(pw.length<8){ document.getElementById("r-pw").classList.add("invalid"); ok=false; } else document.getElementById("r-pw").classList.remove("invalid");
+  if(!age){ document.getElementById("r-age").style.borderColor="var(--danger)"; ok=false; } else document.getElementById("r-age").style.borderColor="var(--line)";
+  if(!c1){ document.getElementById("r-c1").style.background="rgba(255,107,107,.08)"; ok=false; } else document.getElementById("r-c1").style.background="";
+  if(!c2){ document.getElementById("r-c2").style.background="rgba(255,107,107,.08)"; ok=false; } else document.getElementById("r-c2").style.background="";
+  if(!ok){ toast("Controlla i campi obbligatori."); return; }
+  const salt=genSalt(), hash=await hashPassword(pw, salt);
+  const uid=genId("u"), pid=genId("p");
+  state.users[uid]={ id:uid, email, salt, pwHash:hash, profileId:pid, createdAt:Date.now(), consents:{terms:c1, necessary:c2, emailTech:c3, profiling:c4, analytics:c5, ageConfirmed:true}, consentDates:{terms:Date.now(), necessary:Date.now(), emailTech:c3?Date.now():null, profiling:c4?Date.now():null, analytics:c5?Date.now():null} };
+  state.profiles[pid]={ id:pid, name, genre:"Dream-pop", bio:"", color:"#a26bff", userId:uid };
+  state.currentUserId=uid;
+  audit("register"); audit("consent_terms"); audit("consent_necessary"); if(c3) audit("consent_emailTech"); if(c4) audit("consent_profiling"); if(c5) audit("consent_analytics");
+  saveState();
+  toast("Account creato! Benvenuta su Aura.");
+  go("profile");
+}
+
+/* ── Logout ── */
+function doLogout(){ audit("logout"); state.currentUserId=null; saveState(); toast("Disconnesso."); go("landing"); }
+
+/* ── App shell autenticata ── */
+function renderAppShell(view, arg){
+  showPlayer();
+  const prof = state.profiles[myProfileId()];
+  const likeCount = state.likes.length;
+  const sidebar = `
+    <aside class="sidebar" id="sidebar">
+      <div class="brand" onclick="go('home')" style="cursor:pointer"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">PIATTAFORMA · ARTISTI AI</div></div></div>
+      <div class="search"><span>🔍</span><input type="text" placeholder="Cerca brani, artisti…" id="search-input"></div>
+      <div class="nav-title">Esplora</div>
+      <button class="nav-item ${view==='home'?'active':''}" onclick="go('home')"><span class="ic">🏠</span> Home</button>
+      <button class="nav-item ${view==='browse'?'active':''}" onclick="go('browse')"><span class="ic">🎵</span> Brani</button>
+      <button class="nav-item ${view==='upload'?'active':''}" onclick="go('upload')"><span class="ic">⬆️</span> Carica</button>
+      <button class="nav-item ${view==='library'?'active':''}" onclick="go('library')"><span class="ic">📚</span> Libreria <span class="badge">${likeCount}</span></button>
+      <button class="nav-item ${view==='match'?'active':''}" onclick="go('match')"><span class="ic">⚔️</span> Match <span class="badge">${openMatches().length}</span></button>
+      <button class="nav-item ${view==='profile'?'active':''}" onclick="go('profile')"><span class="ic">👤</span> Profilo</button>
+      <button class="nav-item ${view==='settings'?'active':''}" onclick="go('settings')"><span class="ic">⚙️</span> Impostazioni</button>
+      <div class="nav-title">Generi</div>
+      <div id="genre-nav"></div>
+      <div class="usercard" onclick="go('settings')">
+        <div class="av" style="background:linear-gradient(135deg,${prof?prof.color:'#243a52'},#a26bff)">${prof?esc(prof.name[0]||'?'):'?'}</div>
+        <div class="meta"><b>${prof?esc(prof.name):'—'}</b><span>${allTrackIds().filter(id=>state.tracks[id].artistId===prof?.id).length||0} brani</span></div>
+      </div>
+    </aside>`;
+  let content = "";
+  if(view==='home') content = viewHome();
+  else if(view==='browse') content = viewBrowse();
+  else if(view==='upload') content = viewUpload();
+  else if(view==='library') content = viewLibrary();
+  else if(view==='profile') content = viewProfile();
+  else if(view==='settings') content = viewSettings();
+  else if(view==='playlist') content = viewPlaylist();
+  else if(view==='artist') content = viewArtist(arg);
+  else if(view==='track') content = viewTrack(arg);
+  else if(view==='match') content = viewMatch();
+  document.getElementById("root").innerHTML = `
+    <div class="mobile-bar"><div class="brand"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">ARTISTI AI</div></div></div><button class="burger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button></div>
+    <div class="app">${sidebar}<main class="main"><div class="content" id="view">${content}</div></main></div>`;
+  bindDynamic();
+  updatePlayerUI();
+  updateGenreNav();
+  // search
+  const si = document.getElementById("search-input");
+  if(si) si.addEventListener("keydown", e=>{ if(e.key==="Enter"){ const q=e.target.value.trim().toLowerCase(); if(!q) return; const ids=allTrackIds().filter(id=>{ const t=state.tracks[id]; const a=artistById(t.artistId); return t.title.toLowerCase().includes(q)||(a&&a.name.toLowerCase().includes(q))||t.genre.toLowerCase().includes(q); }); doSearch(ids, q); } });
+}
+function doSearch(ids, q){
+  document.getElementById("view").innerHTML = `<div class="topbar"><div><h1>Risultati per "${esc(q)}"</h1><div class="sub">${ids.length} brani</div></div><button class="btn btn-ghost" onclick="go('home')">← Home</button></div><div class="tracklist">${ids.length?ids.map((id,i)=>trackRow(id,i+1,ids)).join(''):'<div class="empty"><p>Nessun risultato.</p></div>'}</div>`;
+  updatePlayerUI();
+}
+
+/* ── Vista: Home ── */
+function viewHome(){
+  const ids=allTrackIds();
+  const featured=ids.slice(0,6).map(id=>trackCard(id, ids)).join("");
+  const artists=Object.keys(state.profiles).filter(aid=>aid!==myProfileId()).slice(0,6).map(aid=>artistCard(aid)).join("");
+  const pls=Object.keys(state.playlists).map(pid=>playlistCard(pid)).join("");
+  const genreChips=["Tutto",...uniqueGenres()].map(g=>`<button class="chip ${(state.activeGenre||'Tutto')===g?'active':''}" onclick="setGenre('${g}')">${g}</button>`).join("");
+  return `
+    <div class="topbar"><div><h1>Benvenuta su Aura</h1><div class="sub">Brani generati con AI, da artisti che dichiarano la propria catena creativa.</div></div>
+    <div class="actions"><button class="btn btn-ghost" onclick="go('browse')">Esplora tutti</button><button class="btn btn-primary" onclick="go('upload')">⬆️ Carica un brano</button></div></div>
+    <div class="hint-banner"><b>Piattaforma conforme.</b> Audio reale (Web Audio + IndexedDB). Profilo, brani, like e consensi salvati localmente. Registra utenti con password hashate SHA-256.</div>
+    <div class="chips">${genreChips}</div>
+    <div class="section-head"><h2>In evidenza</h2><span class="more" onclick="go('browse')">Vedi tutti →</span></div>
+    <div class="grid grid-tracks">${featured||emptyInline("Nessun brano")}</div>
+    <div class="section-head"><h2>Artisti</h2><span class="more" onclick="go('browse')">Vedi tutti →</span></div>
+    <div class="grid grid-artists">${artists||emptyInline("Nessun artista")}</div>
+    <div class="section-head"><h2>Playlist</h2></div>
+    <div class="grid grid-playlists">${pls||emptyInline("Nessuna playlist")}</div>`;
+}
+function emptyInline(msg){ return `<div class="empty" style="grid-column:1/-1"><p>${msg}</p></div>`; }
+
+/* ── Vista: Browse (lista brani) ── */
+function viewBrowse(){
+  const g=state.activeGenre;
+  const ids=allTrackIds().filter(id=>!g||g==="Tutto"||state.tracks[id].genre===g);
+  const genreChips=["Tutto",...uniqueGenres()].map(x=>`<button class="chip ${(g||'Tutto')===x?'active':''}" onclick="setGenre('${x}')">${x}</button>`).join("");
+  const rows=ids.map((id,i)=>trackRow(id,i+1,ids)).join("");
+  return `
+    <div class="topbar"><div><h1>Brani</h1><div class="sub">${ids.length} brani ${g&&g!=='Tutto'?'in "'+g+'"':''}</div></div>
+    <div class="actions"><button class="btn btn-primary" onclick="playAll(${JSON.stringify(ids).replace(/"/g,'&quot;')})">▶ Riproduci tutto</button></div></div>
+    <div class="chips">${genreChips}</div>
+    <div class="tracklist">
+      <div class="track-row header"><div class="idx">#</div><div class="tt"><b style="color:var(--text-mute);font-size:11px;text-transform:uppercase;letter-spacing:.6px">Titolo</b></div><div class="plays">Ascolti</div><div class="dur">Durata</div><div class="acts"></div></div>
+      ${rows||'<div class="empty"><p>Nessun brano in questo genere.</p></div>'}
+    </div>`;
+}
+function setGenre(g){ state.activeGenre=(g==='Tutto'?null:g); saveState(); go('browse'); }
+
+/* ── Vista: Upload ── */
+function viewUpload(){
+  const prof=state.profiles[myProfileId()];
+  return `
+    <div class="topbar"><div><h1>Carica un brano</h1><div class="sub">Pubblichi come <b>${esc(prof.name)}</b> · la catena creativa è obbligatoria (EU AI Act art.50).</div></div>
+    <div class="actions"><button class="btn btn-ghost" onclick="go('home')">Annulla</button></div></div>
+    <div class="upload-grid">
+      <div>
+        <div class="form-section"><h3><span class="num">1</span> File audio</h3>
+          <div class="dropzone" id="dropzone">
+            <div class="ic">⬆️</div><h3>Trascina qui il file audio</h3>
+            <p>MP3, WAV, OGG, M4A · max 50 MB</p>
+            <p style="margin-top:14px"><span class="btn btn-primary" style="pointer-events:none">Scegli file</span></p>
+            <input type="file" id="file-input" accept="audio/*" style="display:none">
+            <div class="filename" id="file-name"></div>
+          </div>
+        </div>
+        <div class="form-section"><h3><span class="num">2</span> Copertina</h3>
+          <div class="dropzone" style="padding:24px;cursor:default"><div class="ic">🖼️</div><h3 style="font-size:15px">Copertina generata dal colore del profilo</h3><p>Caricamento immagini: prossimo sprint.</p></div>
+        </div>
+      </div>
+      <div>
+        <div class="form-section"><h3><span class="num">3</span> Metadati</h3>
+          <div class="field"><label>Titolo *</label><input type="text" id="up-title" placeholder="Es. Neon Tide"></div>
+          <div class="field-row">
+            <div class="field"><label>Genere *</label><select id="up-genre">${["Dream-pop","Ambient","Lo-fi","Synthwave","Strumentale","Hip-hop","Sperimentale"].map(x=>`<option>${x}</option>`).join("")}</select></div>
+            <div class="field"><label>Licenza</label><select id="up-license"><option>CC BY 4.0</option><option>CC BY-NC 4.0</option><option>CC0</option><option>Tutti i diritti riservati</option><option>Commerciale</option></select></div>
+          </div>
+          <div class="field"><label>Descrizione</label><textarea id="up-desc" placeholder="Racconta il brano…"></textarea></div>
+        </div>
+        <div class="form-section"><h3><span class="num">4</span> Catena creativa *</h3>
+          <div class="declaration"><b>Trasparenza obbligatoria.</b> Dichiarare il modello AI e i prompt usati è richiesto dall'<b>EU AI Act art.50</b> per i contenuti generati con AI. Il badge "AI" verrà mostrato sul brano.</div>
+          <div class="field"><label>Modello di generazione</label><select id="up-model"><option>Suno v4.5</option><option>Suno v4</option><option>Udio v1.5</option><option>AIVA Pro</option><option>Mubert</option><option>Boomy</option><option>Altro / non specificato</option></select></div>
+          <div class="field"><label>Prompt</label><textarea id="up-prompt" placeholder="dreamy 80s synthpop, female vox, reverb, nostalgic"></textarea><div class="hint">Raccomandato per la trasparenza.</div></div>
+          <div class="toggle-row"><div class="toggle on" id="up-ai-toggle" data-toggle></div><div class="lbl"><b>Il brano è generato con AI</b><span>Dichiarazione obbligatoria (EU AI Act)</span></div></div>
+        </div>
+        <div class="form-section"><h3><span class="num">5</span> Responsabilità & pubblicazione</h3>
+          <div class="consent-block" id="up-resp">
+            <div class="consent-row required" id="r-resp1">
+              <input type="checkbox" class="cb" id="up-resp1">
+              <div class="lbl">Dichiaro di detenere i diritti sul contenuto o di averne ottenuto regolare autorizzazione, e di averlo generato in conformità alle leggi applicabili e ai Termini. <b>*</b></div>
+            </div>
+            <div class="consent-row required" id="r-resp2">
+              <input type="checkbox" class="cb" id="up-resp2">
+              <div class="lbl">Accetto che la responsabilità dei contenuti pubblicati è interamente a mio carico (Termini §4). Accetto la procedura di <a href="#legal/report">notice & takedown (DSA)</a>. <b>*</b></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="upload-submit" style="width:100%">Pubblica ora</button>
+          <p style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:10px">Salvato localmente (IndexedDB). Il brano è attribuito al tuo profilo.</p>
+        </div>
+      </div>
+    </div>`;
+}
+async function handleUpload(){
+  const fi=document.getElementById("file-input"); const file=fi.files&&fi.files[0];
+  if(!file){ toast("Seleziona un file audio."); return; }
+  if(file.size>50*1024*1024){ toast("File troppo grande (max 50 MB)."); return; }
+  const title=document.getElementById("up-title").value.trim();
+  if(!title){ toast("Inserisci un titolo."); return; }
+  if(!document.getElementById("up-resp1").checked||!document.getElementById("up-resp2").checked){ toast("Devi accettare le dichiarazioni di responsabilità."); return; }
+  const prof=state.profiles[myProfileId()];
+  const btn=document.getElementById("upload-submit"); btn.disabled=true; btn.textContent="Elaborazione…";
+  try{
+    ensureCtx(); let durSec=0;
+    try{ const arr=await file.arrayBuffer(); const tmp=await audioCtx.decodeAudioData(arr.slice(0)); durSec=tmp.duration; }catch(e){ durSec=0; }
+    const id=genId("u"); await putBlob(id, file);
+    state.tracks[id]={ id, artistId:prof.id, title, genre:document.getElementById("up-genre").value, prompt:document.getElementById("up-prompt").value.trim(), model:document.getElementById("up-model").value, isAI:document.getElementById("up-ai-toggle").classList.contains("on"), type:"upload", durSec, plays:0, createdAt:Date.now(), color:prof.color, desc:document.getElementById("up-desc").value.trim(), license:document.getElementById("up-license").value, filename:file.name };
+    audit("upload", id); saveState();
+    toast("Brano pubblicato!"); go("profile");
+  }catch(e){ console.error(e); toast("Errore nel caricamento."); btn.disabled=false; btn.textContent="Pubblica ora"; }
+}
+
+/* ── Vista: Library ── */
+function viewLibrary(){
+  const pid=myProfileId(); const prof=state.profiles[pid];
+  const myTrackIds=allTrackIds().filter(id=>state.tracks[id].artistId===pid);
+  const likedIds=state.likes.slice();
+  const followingIds=state.follows.slice();
+  const pls=Object.keys(state.playlists).map(x=>playlistCard(x)).join("");
+  const totalPlays=myTrackIds.reduce((s,id)=>s+(state.tracks[id].plays||0),0);
+  return `
+    <div class="topbar"><div><h1>La tua libreria</h1><div class="sub">Tutto ciò che hai salvato e seguito.</div></div>
+    <div class="actions"><button class="btn btn-primary" onclick="go('upload')">⬆️ Carica</button></div></div>
+    <div class="stats-row">
+      <div class="stat"><label>I tuoi brani</label><div class="v">${myTrackIds.length}</div></div>
+      <div class="stat"><label>Ascolti totali</label><div class="v">${totalPlays}</div></div>
+      <div class="stat"><label>Brani piaciuti</label><div class="v">${likedIds.length}</div></div>
+      <div class="stat"><label>Artisti seguiti</label><div class="v">${followingIds.length}</div></div>
+      <div class="stat"><label>Playlist</label><div class="v">${Object.keys(state.playlists).length}</div></div>
+    </div>
+    <div class="section-head"><h2>Playlist</h2><span class="more" onclick="createPlaylist()">+ Nuova playlist</span></div>
+    <div class="grid grid-playlists">${pls||'<div class="empty"><p>Nessuna playlist. Crea la prima.</p></div>'}</div>
+    <div class="section-head"><h2>Brani piaciuti</h2></div>
+    <div class="tracklist">${likedIds.length?likedIds.map((id,i)=>trackRow(id,i+1,likedIds)).join(''):'<div class="empty"><p>Nessun brano piaciuto. Clicca 🤍 su un brano.</p></div>'}</div>
+    <div class="section-head"><h2>Artisti seguiti</h2></div>
+    <div class="grid grid-artists">${followingIds.length?followingIds.map(aid=>artistCard(aid)).join(''):'<div class="empty"><p>Non segui ancora nessun artista.</p></div>'}</div>`;
+}
+
+/* ── Vista: Profilo artista ── */
+function viewProfile(){
+  const pid=myProfileId(); const p=state.profiles[pid];
+  const myTrackIds=allTrackIds().filter(id=>state.tracks[id].artistId===pid);
+  const totalPlays=myTrackIds.reduce((s,id)=>s+(state.tracks[id].plays||0),0);
+  const rows=myTrackIds.map((id,i)=>trackRow(id,i+1,myTrackIds)).join("");
+  return `
+    <div class="topbar"><div><h1>Profilo artista</h1></div><div class="actions"><button class="btn btn-ghost" onclick="editProfile()">Modifica</button><button class="btn btn-primary" onclick="go('upload')">⬆️ Carica brano</button></div></div>
+    <div class="hero"><div class="row">
+      <div class="av" style="background:linear-gradient(135deg,${p.color},#a26bff)">${esc(p.name[0]||'?')}</div>
+      <div class="info">
+        <h1>${esc(p.name)} <span style="color:var(--accent);font-size:.6em" title="Verificato">✔</span></h1>
+        <div class="stats"><span><b>${myTrackIds.length}</b> brani</span><span><b>${totalPlays}</b> ascolti</span><span>Profilo locale</span></div>
+        <div class="tags"><span class="tag">${esc(p.genre)}</span><span class="tag">AI-friendly</span><span class="tag">GDPR</span></div>
+        <div class="acts"><button class="btn btn-primary" onclick="go('upload')">⬆️ Carica</button><button class="btn" onclick="copyProfileLink('${p.id}')">🔗 Condividi profilo</button></div>
+      </div></div></div>
+    <p style="color:var(--text-dim);max-width:680px;margin:-6px 0 22px;font-size:14.5px">${esc(p.bio||'Nessuna bio.')}</p>
+    <div class="chain">
+      <h3>Catena creativa del profilo <span class="pill">TRASPARENTE</span></h3>
+      <p class="desc">Dichiarazioni a livello di profilo (EU AI Act art.50).</p>
+      <div class="grid-c">
+        <div class="field"><label>Genere</label><span>${esc(p.genre)}</span></div>
+        <div class="field"><label>Colore</label><span style="font-family:monospace">${esc(p.color)}</span></div>
+        <div class="field"><label>Dichiarazione AI</label><span>Sì, strutturata</span></div>
+        <div class="field"><label>ID profilo</label><span style="font-family:monospace;font-size:11px">${esc(p.id)}</span></div>
+      </div>
+    </div>
+    <div class="section-head"><h2>I tuoi brani</h2></div>
+    <div class="tracklist">${rows||'<div class="empty"><h3>Non hai ancora pubblicato brani</h3><p>Carica il tuo primo brano per vederlo qui.</p><button class="btn btn-primary" onclick="go(\'upload\')">⬆️ Carica un brano</button></div>'}</div>`;
+}
+function editProfile(){ const p=state.profiles[myProfileId()]; const name=prompt("Nome:", p.name); if(name===null) return; const bio=prompt("Bio:", p.bio||""); if(bio===null) return; p.name=name; p.bio=bio; audit("edit_profile"); saveState(); rerender(); toast("Profilo aggiornato."); }
+function copyProfileLink(aid){ const url="https://aura.fm/artist/"+aid; navigator.clipboard.writeText(url).then(()=>toast("Link copiato: "+url)).catch(()=>toast("Link: "+url)); }
+
+/* ── Vista: Settings (diritti GDPR: export, erasure, consensi) ── */
+function viewSettings(){
+  const u=currentUser(); const c=u.consents; const cd=u.consentDates||{};
+  const fmt=t=>t?new Date(t).toLocaleDateString("it-IT"):"—";
+  return `
+    <div class="topbar"><div><h1>Impostazioni & privacy</h1><div class="sub">I tuoi diritti GDPR. Dati minimi, controllo totale.</div></div><div class="actions"><button class="btn btn-danger" onclick="doLogout()">Logout</button></div></div>
+    <div class="settings-grid">
+      <div class="settings-card">
+        <h3>🔑 Account</h3><p>Account locale, password hashate.</p>
+        <div class="field"><label>Email</label><input type="email" value="${esc(u.email)}" readonly></div>
+        <div class="field"><label>Nome artista</label><input type="text" value="${esc(state.profiles[u.profileId].name)}" readonly></div>
+        <div class="field"><label>Iscritto il</label><input type="text" value="${fmt(u.createdAt)}" readonly></div>
+      </div>
+      <div class="settings-card">
+        <h3>📋 Consensi</h3><p>Gestisci i tuoi consensi. Revocabili in qualsiasi momento (GDPR art.7 §3).</p>
+        <div class="consent-list">
+          <div class="row"><div class="ic">📄</div><div class="meta"><b>Termini & Privacy</b><span>Accettato il ${fmt(cd.terms)}</span></div><div class="st on">Obbligatorio</div></div>
+          <div class="row"><div class="ic">⚙️</div><div class="meta"><b>Dati minimi per il servizio</b><span>Accettato il ${fmt(cd.necessary)}</span></div><div class="st on">Obbligatorio</div></div>
+          <div class="row"><div class="ic">📧</div><div class="meta"><b>Email tecniche</b><span>${c.emailTech?'Accettato il '+fmt(cd.emailTech):'Non accordato'}</span></div><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="toggleConsent('emailTech')">${c.emailTech?'Disattiva':'Attiva'}</button></div>
+          <div class="row"><div class="ic">🎯</div><div class="meta"><b>Profilazione minimale</b><span>${c.profiling?'Accettato il '+fmt(cd.profiling):'Non accordato'}</span></div><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="toggleConsent('profiling')">${c.profiling?'Disattiva':'Attiva'}</button></div>
+          <div class="row"><div class="ic">📊</div><div class="meta"><b>Analisi aggregata anonima</b><span>${c.analytics?'Accettato il '+fmt(cd.analytics):'Non accordato'}</span></div><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="toggleConsent('analytics')">${c.analytics?'Disattiva':'Attiva'}</button></div>
+        </div>
+      </div>
+      <div class="settings-card">
+        <h3>🔑 Cambia password</h3><p>Reimposta la password del tuo account. Sarà hashata con SHA-256 + nuovo salt.</p>
+        <div class="field" id="set-pw-f"><label>Nuova password</label><input type="password" id="set-pw" placeholder="Min. 8 caratteri"><div class="pw-strength"><div class="bar" id="set-pw-bar"></div></div><div class="error" style="color:var(--danger)">Minimo 8 caratteri.</div></div>
+        <div class="field" id="set-pw2-f"><label>Ripeti nuova password</label><input type="password" id="set-pw2" placeholder="Uguale a sopra"><div class="error" style="color:var(--danger)">Le password non coincidono.</div></div>
+        <button class="btn btn-primary" style="width:100%" onclick="changePasswordFromSettings()">Aggiorna password</button>
+      </div>
+      <div class="settings-card">
+        <h3>📤 Esporta i tuoi dati</h3><p>Diritto alla portabilità (GDPR art.20). Scarica tutti i tuoi dati in formato JSON.</p>
+        <button class="btn btn-primary" style="width:100%" onclick="exportData()">Esporta i miei dati (.json)</button>
+      </div>
+      <div class="settings-card">
+        <h3>🗑️ Cancella il mio account</h3><p>Diritto alla cancellazione (GDPR art.17). L'azione è irreversibile: profilo, brani caricati, like, follow e consensi verranno rimossi.</p>
+        <button class="btn btn-danger" style="width:100%" onclick="eraseAccount()">Cancella account e dati</button>
+      </div>
+      <div class="settings-card" style="grid-column:1/-1">
+        <h3>📜 Audit log</h3><p>Registro delle azioni sul tuo account (ultime 20). Trasperenza GDPR art.15.</p>
+        <div style="font-size:12.5px;color:var(--text-dim);max-height:200px;overflow:auto">
+          ${state.audit.filter(a=>a.userId===state.currentUserId).slice(-20).reverse().map(a=>`<div style="padding:5px 0;border-bottom:1px solid var(--line)"><span style="color:var(--text-mute)">${new Date(a.t).toLocaleString("it-IT")}</span> · <b>${esc(a.action)}</b>${a.detail?' <span style="color:var(--text-mute)">('+esc(a.detail)+')</span>':''}</div>`).join('')||'<div style="color:var(--text-mute)">Nessuna azione registrata.</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+function toggleConsent(key){
+  const u=currentUser(); u.consents[key]=!u.consents[key]; u.consentDates[key]=u.consents[key]?Date.now():null;
+  audit(u.consents[key]?"consent_"+key:"revoke_"+key); saveState(); rerender(); toast("Consenso aggiornato.");
+}
+function exportData(){
+  const u=currentUser(); const pid=u.profileId;
+  const myTracks=allTrackIds().filter(id=>state.tracks[id].artistId===pid).map(id=>{ const t={...state.tracks[id]}; delete t.color; return t; });
+  const data={ exportedAt:new Date().toISOString(), user:{ email:u.email, name:state.profiles[pid].name, createdAt:u.createdAt }, profile:state.profiles[pid], tracks:myTracks, likes:state.likes, follows:state.follows, consents:u.consents, consentDates:u.consentDates, audit:state.audit.filter(a=>a.userId===state.currentUserId) };
+  const blob=new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="aura_miei_dati.json"; a.click(); URL.revokeObjectURL(url);
+  audit("export_data"); toast("Dati esportati.");
+}
+function eraseAccount(){
+  if(!confirm("Cancella definitivamente account, profilo, brani, like, follow e consensi? Irreversibile.")) return;
+  const u=currentUser(); const pid=u.profileId;
+  allTrackIds().filter(id=>state.tracks[id].artistId===pid).forEach(id=>{ delBlob(id); delete state.tracks[id]; });
+  state.likes=[]; state.follows=[]; delete state.profiles[pid]; delete state.users[state.currentUserId]; state.currentUserId=null;
+  state.audit=[]; saveState();
+  toast("Account e dati cancellati."); go("landing");
+}
+
+/* ── Vista: Playlist / Artist / Track ── */
+function viewPlaylist(){
+  const pid=state.openPlaylistId; const pl=state.playlists[pid]; if(!pl) return viewLibrary();
+  const ids=pl.trackIds.slice(); const rows=ids.map((id,i)=>trackRow(id,i+1,ids)).join("");
+  return `<div class="topbar"><div><h1>${esc(pl.name)}</h1><div class="sub">${ids.length} brani</div></div><div class="actions"><button class="btn btn-primary" onclick="playAll(${JSON.stringify(ids).replace(/"/g,'&quot;')})">▶ Riproduci</button><button class="btn btn-ghost" onclick="go('library')">← Libreria</button></div></div>
+    <div class="tracklist">${rows||'<div class="empty"><p>Playlist vuota.</p></div>'}</div>`;
+}
+function openPlaylist(pid){ state.openPlaylistId=pid; saveState(); go("playlist"); }
+function viewArtist(aid){
+  const a=artistById(aid); if(!a){ go("home"); return ""; }
+  const ids=allTrackIds().filter(id=>state.tracks[id].artistId===aid);
+  const followed=isFollowing(aid);
+  const totalAura=artistAura(aid);
+  const totalFollowers=artistFollowerCount(aid);
+  const socials=a.social||{};
+  const socialStats=state.socialStats&&state.socialStats[aid]||{};
+  const coverGrad=`linear-gradient(135deg, ${a.cover||a.color}, ${a.color})`;
+  const socialList=Object.keys(SOCIAL_META).filter(k=>socials[k]).map(k=>{
+    const meta=SOCIAL_META[k]; const handle=socials[k]; const count=socialStats[k]||0;
+    return `<a class="social-badge" href="${meta.url(handle)}" target="_blank" rel="noopener" title="${meta.label}">
+      <span class="sic">${meta.icon}</span>
+      <span class="sinfo"><b>${meta.label}</b><span class="sfl">${fmtFollowers(count)} follower</span></span>
+      <span class="scount">${fmtFollowers(count)}</span>
+    </a>`;
+  }).join("");
+  const topTrack = ids.slice().sort((x,y)=>auraCount(y)-auraCount(x))[0];
+  return `<div class="topbar"><button class="btn btn-ghost" onclick="go('home')">← Home</button>
+    <button class="btn btn-ghost" onclick="go('match')">⚔️ Sfida questo artista</button></div>
+    <div class="artist-pro">
+      <div class="ap-cover" style="background:${coverGrad}"></div>
+      <div class="ap-body">
+        <div class="ap-av" style="background:linear-gradient(135deg,${a.color},#a26bff)">${esc(a.name[0]||'?')}</div>
+        <div class="ap-head">
+          <div class="ap-verified"><span class="vpill">✓ Artista verificato</span><span class="tag">${esc(a.genre)}</span></div>
+          <h1>${esc(a.name)}</h1>
+          <div class="ap-stats">
+            <div class="stat"><b>${fmtFollowers(totalFollowers)}</b><span>Follower totali</span></div>
+            <div class="stat"><b>${ids.length}</b><span>Brani</span></div>
+            <div class="stat aura"><b>${fmtFollowers(totalAura)}</b><span>✨ Aura</span></div>
+            <div class="stat"><b>${fmtFollowers(auraCount(topTrack||''))}</b><span>Top Aura brano</span></div>
+          </div>
+          <div class="ap-bio">${esc(a.bio||'')}</div>
+          <div class="ap-acts">
+            <button class="btn ${followed?'':'btn-primary'}" onclick="toggleFollow('${aid}')">${followed?'✓ Seguito':'+ Segui'}</button>
+            <button class="btn btn-ghost" onclick="copyProfileLink('${aid}')">🔗 Condividi profilo</button>
+            <button class="btn btn-aura" onclick="go('match')">⚔️ Sfida in Match</button>
+          </div>
+        </div>
+      </div>
+      ${socialList?`<div class="ap-social"><div class="ap-sh">Canali social</div><div class="social-grid">${socialList}</div>
+        <div class="ap-social-total"><b>${fmtFollowers(totalFollowers)}</b> follower aggregati sui social · click per aprire il canale</div></div>`:''}
+    </div>
+    <div class="section-head"><h2>Brani</h2><span class="more" onclick="playAll(${JSON.stringify(ids).replace(/"/g,'&quot;')})">▶ Riproduci tutti</span></div>
+    <div class="tracklist">${ids.length?ids.map((id,i)=>trackRow(id,i+1,ids)).join(''):'<div class="empty"><p>Nessun brano.</p></div>'}</div>`;
+}
+
+/* ── Vista Match / Aura Battle ── */
+function viewMatch(){
+  resolveExpiredMatches();
+  const open=state.matches.filter(m=>m.status==="open");
+  const closed=state.matches.filter(m=>m.status==="closed");
+  const leaderboard=Object.keys(state.profiles).filter(id=>!state.profiles[id].userId||true).map(id=>({
+    id, name:state.profiles[id].name, genre:state.profiles[id].genre, color:state.profiles[id].color,
+    aura:artistAura(id), followers:artistFollowerCount(id), tracks:Object.values(state.tracks).filter(t=>t.artistId===id).length
+  })).sort((a,b)=>b.aura-a.aura);
+  const myPid=myProfileId();
+  const allArtists=Object.keys(state.profiles).map(id=>({id, name:state.profiles[id].name}));
+  const artistPicker=allArtists.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");
+
+  return `<div class="topbar"><div><h1>⚔️ Match Aura</h1><div class="sub">Sfide 1v1 basate sui like (Aura) · aperte a tutti gli ascoltatori</div></div></div>
+
+    <div class="match-create">
+      <div class="mc-title">✨ Lancia una nuova sfida</div>
+      <div class="mc-desc">Scegli due artisti: chi accumula più Aura in 24h vince. Una solaAura per brano per votante.</div>
+      <div class="mc-form">
+        <select id="mc-a" class="mc-sel"><option value="">Artista A…</option>${artistPicker}</select>
+        <span class="vs">VS</span>
+        <select id="mc-b" class="mc-sel"><option value="">Artista B…</option>${artistPicker}</select>
+        <button class="btn btn-primary" onclick="const a=document.getElementById('mc-a').value,b=document.getElementById('mc-b').value; if(a&&b) createMatch(a,b); else toast('Scegli due artisti');">⚔️ Lancia match</button>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Sfide aperte (${open.length})</h2></div>
+    <div class="match-list">${open.length?open.map(m=>matchCard(m)).join(''):'<div class="empty"><p>Nessuna sfida attiva. Lanciala tu qui sopra!</p></div>'}</div>
+
+    <div class="section-head"><h2>Classifica Aura 🏆</h2><span class="more" onclick="go('match')">Aggiorna</span></div>
+    <div class="leaderboard">${leaderboard.map((a,i)=>`
+      <div class="lb-row ${i<3?'top'+(i+1):''}">
+        <div class="lb-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</div>
+        <div class="lb-av" style="background:linear-gradient(135deg,${a.color},#a26bff)">${esc(a.name[0]||'?')}</div>
+        <div class="lb-name"><b>${esc(a.name)}</b><span class="tag">${esc(a.genre)}</span></div>
+        <div class="lb-metric"><b>${a.tracks}</b><span>brani</span></div>
+        <div class="lb-metric"><b>${fmtFollowers(a.followers)}</b><span>follower</span></div>
+        <div class="lb-metric aura"><b>${fmtFollowers(a.aura)}</b><span>✨ Aura</span></div>
+        <div class="lb-act"><button class="btn btn-ghost" onclick="go('artist','${a.id}')">Vedi</button></div>
+      </div>
+    `).join('')}</div>
+
+    ${closed.length?`<div class="section-head"><h2>Sfide concluse</h2></div>
+    <div class="match-list closed">${closed.slice(0,6).map(m=>matchCard(m)).join('')}</div>`:''}
+    `;
+}
+function matchCard(m){
+  const a=artistById(m.a), b=artistById(m.b); if(!a||!b) return "";
+  const c=matchVoteCounts(m);
+  const total=c.a+c.b; const pa=total?Math.round(c.a/total*100):50; const pb=100-pa;
+  const remain=Math.max(0, m.endsAt-Date.now());
+  const hh=Math.floor(remain/3600000), mm=Math.floor((remain%3600000)/60000);
+  const myVote=activeMatchVote(m.id);
+  const winner = m.status==="closed" ? m.winner : null;
+  return `<div class="match-card ${m.status==='closed'?'mcl':''}">
+    <div class="mc-head"><span class="mc-status ${m.status}">${m.status==='open'?'🔥 Aperta':'✓ Conclusa'}</span>
+      ${m.status==='open'?`<span class="mc-time">⏱ ${hh}h ${mm}m</span>`:`<span class="mc-time">Vincitore: ${winner?esc(artistById(winner).name):'Pareggio'}</span>`}</div>
+    <div class="mc-vs">
+      <div class="mc-side ${myVote==='a'?'voted':''} ${winner==='a'?'won':''} ${winner&&winner!=='a'?'lost':''}">
+        <div class="mc-av" style="background:linear-gradient(135deg,${a.color},#a26bff)">${esc(a.name[0]||'?')}</div>
+        <div class="mc-name">${esc(a.name)}</div>
+        <div class="mc-genre">${esc(a.genre)}</div>
+        <div class="mc-votes"><b>${c.a}</b><span>Aura</span></div>
+        ${m.status==='open'?`<button class="btn ${myVote==='a'?'btn-voted':'btn-primary'}" onclick="voteMatch('${m.id}','a')">${myVote==='a'?'✨ Votato':'Vota A'}</button>`:winner==='a'?'<div class="mc-won">🏆 Vince</div>':''}
+      </div>
+      <div class="mc-center"><div class="vs-big">VS</div><div class="mc-bar"><div class="bfa" style="width:${pa}%"></div><div class="bfb" style="width:${pb}%"></div></div><div class="mc-pct">${pa}% · ${pb}%</div></div>
+      <div class="mc-side ${myVote==='b'?'voted':''} ${winner==='b'?'won':''} ${winner&&winner!=='b'?'lost':''}">
+        <div class="mc-av" style="background:linear-gradient(135deg,${b.color},#a26bff)">${esc(b.name[0]||'?')}</div>
+        <div class="mc-name">${esc(b.name)}</div>
+        <div class="mc-genre">${esc(b.genre)}</div>
+        <div class="mc-votes"><b>${c.b}</b><span>Aura</span></div>
+        ${m.status==='open'?`<button class="btn ${myVote==='b'?'btn-voted':'btn-primary'}" onclick="voteMatch('${m.id}','b')">${myVote==='b'?'✨ Votato':'Vota B'}</button>`:winner==='b'?'<div class="mc-won">🏆 Vince</div>':''}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Viste pubbliche (guest, senza login) ── */
+function renderGuestVote(arg){
+  // arg = trackId; guest vota Aura su un brano ricevuto per link
+  resolveExpiredMatches();
+  const t=arg&&state.tracks[arg];
+  const ids=allTrackIds();
+  if(!t){ // lista brani pubblici
+    document.getElementById("root").innerHTML=`<div class="guest-wrap">
+      <div class="guest-brand"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">VOTA GLI ARTISTI</div></div></div>
+      <div class="guest-card">
+        <h1>✨ Dai Aura ai tuoi artisti preferiti</h1>
+        <p class="g-sub">Una Aura = un like. Puoi votare senza registrarti, una Aura per brano. Crea un account per seguire gli artisti, caricare brani e partecipare ai Match.</p>
+        <div class="guest-actions"><button class="btn btn-primary" onclick="go('register')">Crea account artista</button><button class="btn btn-ghost" onclick="go('match-public')">⚔️ Vai ai Match</button></div>
+      </div>
+      <div class="section-head"><h2>Brani da votare</h2></div>
+      <div class="guest-tracks">${ids.map(id=>guestTrackRow(id)).join('')}</div>
+    </div>`;
+    return;
+  }
+}
+function guestTrackRow(id){
+  const t=state.tracks[id]; const a=artistById(t.artistId); if(!a) return "";
+  const voted=hasVotedAura(id);
+  return `<div class="gt-row">
+    <div class="gt-cover" style="background:linear-gradient(135deg,${t.color||a.color},#160f3a)">♪</div>
+    <div class="gt-info"><b>${esc(t.title)}</b><span class="gby">${esc(a.name)} · ${esc(t.genre)}</span></div>
+    <div class="gt-aura"><b>${auraCount(id)}</b><span>Aura</span></div>
+    <button class="btn ${voted?'btn-voted':'btn-aura'}" onclick="voteAura('${id}')">${voted?'✨ Votata':'✨ Dai Aura'}</button>
+    <button class="btn btn-ghost" onclick="go('artist-public','${a.id}')">Vedi artista</button>
+  </div>`;
+}
+function renderArtistPublic(aid){
+  resolveExpiredMatches();
+  const a=artistById(aid); if(!a){ go("vote"); return; }
+  const ids=allTrackIds().filter(id=>state.tracks[id].artistId===aid);
+  const totalAura=artistAura(aid);
+  const totalFollowers=artistFollowerCount(aid);
+  const socials=a.social||{}; const socialStats=state.socialStats&&state.socialStats[aid]||{};
+  const coverGrad=`linear-gradient(135deg, ${a.cover||a.color}, ${a.color})`;
+  const socialList=Object.keys(SOCIAL_META).filter(k=>socials[k]).map(k=>{
+    const meta=SOCIAL_META[k]; const handle=socials[k]; const count=socialStats[k]||0;
+    return `<a class="social-badge" href="${meta.url(handle)}" target="_blank" rel="noopener"><span class="sic">${meta.icon}</span><span class="sinfo"><b>${meta.label}</b><span class="sfl">${fmtFollowers(count)} follower</span></span><span class="scount">${fmtFollowers(count)}</span></a>`;
+  }).join("");
+  document.getElementById("root").innerHTML=`<div class="guest-wrap">
+    <div class="guest-bar"><div class="guest-brand"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">PROFILO ARTISTA</div></div></div>
+      <button class="btn btn-ghost" onclick="go('vote')">← Tutti i brani</button></div>
+    <div class="artist-pro">
+      <div class="ap-cover" style="background:${coverGrad}"></div>
+      <div class="ap-body">
+        <div class="ap-av" style="background:linear-gradient(135deg,${a.color},#a26bff)">${esc(a.name[0]||'?')}</div>
+        <div class="ap-head">
+          <div class="ap-verified"><span class="vpill">✓ Artista verificato</span><span class="tag">${esc(a.genre)}</span></div>
+          <h1>${esc(a.name)}</h1>
+          <div class="ap-stats">
+            <div class="stat"><b>${fmtFollowers(totalFollowers)}</b><span>Follower totali</span></div>
+            <div class="stat"><b>${ids.length}</b><span>Brani</span></div>
+            <div class="stat aura"><b>${fmtFollowers(totalAura)}</b><span>✨ Aura</span></div>
+          </div>
+          <div class="ap-bio">${esc(a.bio||'')}</div>
+          <div class="ap-acts"><button class="btn btn-aura" onclick="go('match-public')">⚔️ Vedi in Match</button>
+            <button class="btn btn-primary" onclick="go('register')">Diventa artista</button></div>
+        </div>
+      </div>
+      ${socialList?`<div class="ap-social"><div class="ap-sh">Canali social</div><div class="social-grid">${socialList}</div>
+        <div class="ap-social-total"><b>${fmtFollowers(totalFollowers)}</b> follower aggregati</div></div>`:''}
+    </div>
+    <div class="section-head"><h2>Brani · vota ✨ Aura</h2></div>
+    <div class="guest-tracks">${ids.length?ids.map(id=>guestTrackRow(id)).join(''):'<div class="empty"><p>Nessun brano.</p></div>'}</div>
+  </div>`;
+}
+function renderMatchPublic(){
+  resolveExpiredMatches();
+  const open=state.matches.filter(m=>m.status==="open");
+  document.getElementById("root").innerHTML=`<div class="guest-wrap">
+    <div class="guest-bar"><div class="guest-brand"><div class="dot"></div><div><div class="name">Aura</div><div class="tag">MATCH AURA</div></div></div>
+      <button class="btn btn-ghost" onclick="go('vote')">← Brani</button></div>
+    <div class="guest-hero">
+      <h1>⚔️ Match Aura</h1>
+      <p>Sfide 1v1 tra artisti basate sui like (Aura). Vota senza registrazione: una Aura per lato per match.</p>
+      <div class="guest-actions"><button class="btn btn-primary" onclick="go('register')">Crea account per lanciare sfide</button></div>
+    </div>
+    <div class="match-list">${open.length?open.map(m=>matchCard(m)).join(''):'<div class="empty"><p>Nessuna sfida attiva al momento. Torna presto!</p></div>'}</div>
+  </div>`;
+}
+function viewTrack(tid){
+  const t=state.tracks[tid]; if(!t){ go("home"); return ""; }
+  const a=artistById(t.artistId);
+  return `<div class="topbar"><button class="btn btn-ghost" onclick="go('browse')">← Brani</button></div>
+    <div class="hero"><div class="row"><div class="cover" style="width:140px;height:140px;border-radius:12px;flex:0 0 140px;background:linear-gradient(135deg,${t.color||a.color},#160f3a);display:grid;place-items:center;font-size:48px;color:rgba(255,255,255,.4)">♪</div>
+    <div class="info"><h1>${esc(t.title)}</h1><div class="stats"><span>${esc(a?a.name:'?')}</span><span>${t.plays||0} ascolti</span><span>${esc(t.genre)}</span></div>
+    <div class="tags">${t.isAI?'<span class="tag">AI · '+esc(t.model||'')+'</span>':''}<span class="tag">${esc(t.license||'—')}</span></div>
+    <div class="acts"><button class="btn btn-primary" onclick="playTrack('${tid}',[${JSON.stringify(allTrackIds()).replace(/"/g,'&quot;')}])">▶ Riproduci</button><button class="btn ${isLiked(tid)?'':'btn-primary'}" onclick="toggleLike('${tid}')">${isLiked(tid)?'❤️ Mi piace':'🤍 Mi piace'}</button><button class="btn btn-aura" onclick="voteAura('${tid}')">${hasVotedAura(tid)?'✨ '+(auraCount(tid))+' Aura':'✨ Dai Aura ('+auraCount(tid)+')'}</button><button class="btn" onclick="openShare('${tid}')">↗️ Condividi</button></div></div></div></div>
+    <div class="chain"><h3>Catena creativa <span class="pill">EU AI ACT ART.50</span></h3><p class="desc">Trasparenza dichiarata dall'artista.</p>
+      <div class="grid-c">
+        <div class="field"><label>Modello AI</label><span>${esc(t.model||'—')}</span></div>
+        <div class="field"><label>Prompt</label><span>${esc(t.prompt||'—')}</span></div>
+        <div class="field"><label>Licenza</label><span>${esc(t.license||'—')}</span></div>
+        <div class="field"><label>Generato con AI</label><span>${t.isAI?'Sì':'No'}</span></div>
+      </div></div>
+    ${t.desc?`<p style="color:var(--text-dim);max-width:680px;font-size:14.5px">${esc(t.desc)}</p>`:''}
+    <div class="section-head"><h2>Segnalazione contenuti</h2></div>
+    <div class="hint-banner">Contenuto illecito o violazione di diritti? <a href="#" onclick="openReport('${tid}');return false">Segnala questo brano</a> — procedura DSA.</div>`;
+}
+
+/* ── Pagine legali ── */
+function renderLegal(which){
+  const updated="23 novembre 2026";
+  let body="";
+  if(which==="privacy") body=legalPrivacy(updated);
+  else if(which==="terms") body=legalTerms(updated);
+  else if(which==="cookie") body=legalCookie(updated);
+  else if(which==="report") body=legalReport(updated);
+  else body=legalPrivacy(updated);
+  document.getElementById("root").innerHTML = `
+  <div class="app" style="grid-template-columns:1fr"><main class="main"><div class="content legal">
+    <div class="topbar"><div><h1>${body.title}</h1><div class="updated">Ultimo aggiornamento: ${updated}</div></div>
+    <div class="actions"><button class="btn btn-ghost" onclick="go('landing')">← Home</button></div></div>
+    ${body.html}
+  </div></main></div>`;
+  hidePlayer();
+}
+function legalPrivacy(d){ return {title:"Privacy Policy", html:`
+  <p>Aura è una piattaforma dimostrativa ("demo") per artisti di musica generata con intelligenza artificiale. Trattiamo i dati personali secondo il <b>Regolamento (UE) 2016/679 (GDPR)</b>.</p>
+  <h2>1. Titolare del trattamento</h2>
+  <p>Il titolare è Aura (demo). Per contatti: privacy@aura.fm (indirizzo fittizio per la demo).</p>
+  <h2>2. Base giuridica</h2>
+  <ul><li><b>Art.6 §1 lit.a</b> — consenso dell'interessato (registrazione, consensi facoltativi).</li><li><b>Art.6 §1 lit.b</b> — esecuzione di un contratto (accesso, pubblicazione brani).</li><li><b>Art.6 §1 lit.c</b> — obblighi legali (conservazione log anti-abuso, risposte a ordini DSA).</li></ul>
+  <h2>3. Dati trattati (minimi per legge)</h2>
+  <table><tr><th>Categoria</th><th>Dettaglio</th><th>Scopo</th><th>Conservazione</th></tr>
+  <tr><td>Email</td><td>Indirizzo email</td><td>Accesso, notifiche essenziali</td><td>Fino a cancellazione account</td></tr>
+  <tr><td>Nome artista</td><td>Pseudonimo scelto</td><td>Profilo pubblico</td><td>Fino a cancellazione</td></tr>
+  <tr><td>Brani pubblicati</td><td>File audio + metadati + catena creativa</td><td>Erogazione servizio</td><td>Fino a cancellazione brano</td></tr>
+  <tr><td>Preferenze</td><td>Like, follow, playlist</td><td>Esperienza utente</td><td>Fino a cancellazione</td></tr>
+  <tr><td>Log tecnici</td><td>Audit azioni account</td><td>Sicurezza, anti-abuso</td><td>200 eventi, poi rotation</td></tr>
+  </table>
+  <div class="callout"><b>Dati NON trattati.</b> Nessun cookie di tracciamento/profilazione pubblicitaria, nessuna profilazione marketing, nessuna vendita a terzi, nessun dato biometrico, nessun dato di geolocalizzazione.</div>
+  <h2>4. Età minima</h2>
+  <p>Il servizio è riservato a maggiori di <b>16 anni</b> (GDPR art.8, salvo età diversa stabilita dallo Stato membro). La verifica è autocertificata in fase di registrazione.</p>
+  <h2>5. Diritti dell'interessato</h2>
+  <ul><li><b>Accesso</b> (art.15) — vedi Audit log in Impostazioni.</li><li><b>Rettifica</b> (art.16) — modifica profilo in Impostazioni.</li><li><b>Cancellazione</b> (art.17) — "Cancella account" in Impostazioni.</li><li><b>Limitazione</b> (art.18) — contatta il titolare.</li><li><b>Portabilità</b> (art.20) — "Esporta i miei dati" in Impostazioni (JSON).</li><li><b>Opposizione</b> (art.21) — revoca consensi in Impostazioni.</li><li><b>Revoca consenso</b> (art.7 §3) — in qualsiasi momento.</li></ul>
+  <div class="callout"><b>Reclami.</b> Hai diritto di rivolgerti al Garante per la protezione dei dati personali del tuo Paese (in Italia: <a href="https://www.garanteprivacy.it" target="_blank">garanteprivacy.it</a>).</div>
+  <h2>6. Trasferimenti extra-UE</h2>
+  <p>In questa demo i dati restano nel tuo browser (localStorage + IndexedDB). Nessun trasferimento a server esterni. In una versione di produzione, eventuali trasferimenti extra-UE sarebbero regolati da clausole contrattuali tipo GDPR art.46.</p>
+  <h2>7. Tracciamento AI</h2>
+  <p>Ogni brano generato con AI reca un <b>badge "AI"</b> e una <b>catena creativa dichiarata</b> (modello, prompt, licenza), in coerenza con <b>EU AI Act art.50</b> sull'obbligo di trasparenza dei contenuti generati con AI.</p>
+  `}; }
+function legalTerms(d){ return {title:"Termini di servizio", html:`
+  <p>Benvenuta su Aura. Usando la piattaforma accetti questi termini.</p>
+  <h2>1. Natura del servizio</h2>
+  <p>Aura è una piattaforma di pubblicazione e ascolto di musica generata con AI, con catena creativa dichiarata. Demo non in produzione: i dati sono conservati nel browser dell'utente.</p>
+  <h2>2. Account</h2>
+  <p>Servizio riservato a maggiori di 16 anni. Sei responsabile della veridicità delle informazioni fornite e della sicurezza della password.</p>
+  <h2>3. Trasparenza dei contenuti AI</h2>
+  <p>I contenuti generati con AI devono essere dichiarati (EU AI Act art.50). La piattaforma mostra un badge "AI" e la catena creativa (modello, prompt, licenza) su ogni brano.</p>
+  <h2>4. Responsabilità dei contenuti</h2>
+  <div class="callout"><b>La responsabilità dei contenuti pubblicati è interamente a carico degli artisti.</b> Aura è un intermediario che offre strumenti di pubblicazione e moderazione.</div>
+  <p>L'artista dichiara di detenere i diritti sul contenuto o di averne ottenuto regolare autorizzazione, e di averlo generato nel rispetto delle leggi applicabili (diritto d'autore, diritti connessi, norme sui contenuti generati con AI, norme locali).</p>
+  <h2>5. Contenuti vietati</h2>
+  <ul><li>Violazione del diritto d'autore o di diritti connessi.</li><li>Contenuti discriminatori, d'odio, o che incitano alla violenza.</li><li>Contenuti illeciti secondo le leggi applicabili.</li><li>False dichiarazioni sulla catena creativa AI.</li></ul>
+  <h2>6. Notice & takedown (DSA — Regolamento UE 2022/2065)</h2>
+  <p>Segnalazioni tramite il modulo "Segnala contenuto". Aura valuta e risponde entro <b>7 giorni</b>, motivando il provvedimento. Le false segnalazioni sono sanzionate (DSA art.20).</p>
+  <h2>7. Sospensione</h2>
+  <p>Aura può sospendere account in caso di violazioni ripetute o gravi, con preavviso salvo casi urgenti.</p>
+  <h2>8. Licenze</h2>
+  <p>Ogni brano mantiene la licenza scelta dall'artista (CC0, CC BY 4.0, CC BY-NC 4.0, commerciale, ecc.). L'ascolto e la condivisione della piattaforma non implicano cessione di diritti.</p>
+  <h2>9. Modifiche</h2>
+  <p>I termini possono essere aggiornati con preavviso. Le modifiche sostanziali richiedono nuova accettazione.</p>
+  <h2>10. Legge applicabile</h2>
+  <p>Legge italiana, con foro di competenza. Conforme GDPR, DSA, EU AI Act.</p>
+  `}; }
+function legalCookie(d){ return {title:"Cookie Policy", html:`
+  <p>Aura usa <b>solo cookie tecnici necessari</b> al funzionamento (sessione, preferenze, stato dell'applicazione salvato in localStorage/IndexedDB).</p>
+  <h2>Cookie utilizzati</h2>
+  <table><tr><th>Cookie</th><th>Tipo</th><th>Scopo</th><th>Durata</th></tr>
+  <tr><td>aura_platform_v1</td><td>Tecnico necessario</td><td>Stato app (account, brani, preferenze)</td><td>Persistente (fino a logout/cancellazione)</td></tr>
+  <tr><td>aura_audio_db</td><td>Tecnico necessario</td><td>Audio dei brani caricati</td><td>Persistente</td></tr></table>
+  <div class="callout"><b>Nessun cookie di profilazione.</b> Nessun cookie di terze parti. Nessun pixel di tracciamento. Nessuna pubblicità.</div>
+  <h2>Consensi facoltativi</h2>
+  <p>Se attivi i consensi facoltativi (analisi aggregata anonima, profilazione minimale), usiamo dati aggregati senza identificarti. Puoi revocarli in Impostazioni.</p>
+  <h2>Consenso (GDPR art.6 e Direttiva ePrivacy)</h2>
+  <p>Al primo accesso mostriamo un banner con scelta: "Accetta tutti", "Solo necessari", "Gestisci". Il tuo consenso è registrato con data.</p>
+  <h2>Cookie di terze parti</h2>
+  <p>Non ne usiamo. I link di condivisione a X/WhatsApp aprono le rispettive piattaforme, che possono avere proprie cookie policy.</p>
+  `}; }
+function legalReport(d){ return {title:"Segnalazioni contenuti — DSA", html:`
+  <p>Aura rispetta il <b>Regolamento (UE) 2022/2065 (Digital Services Act)</b>.</p>
+  <h2>Come segnalare</h2>
+  <p>Usa il modulo "Segnala contenuto" presente su ogni brano, o scrivi a reports@aura.fm (indirizzo fittizio per la demo).</p>
+  <h2>Cosa includere</h2>
+  <ul><li>Motivo della segnalazione (copyright, contenuto illecito, odio, falsa dichiarazione AI, altro).</li><li>Descrizione del motivo.</li><li>Email (facoltativa, per ricevere l'esito).</li></ul>
+  <h2>Tempi di risposta</h2>
+  <p>Aura valuta la segnalazione e comunica la decisione entro <b>7 giorni</b>, motivandola.</p>
+  <h2>False segnalazioni</h2>
+  <p>Le segnalazioni manifestamente infondate sono sanzionate (DSA art.20).</p>
+  <h2>Contatti</h2>
+  <p>Referente per la conformità: compliance@aura.fm (fittizio, demo).</p>
+  `}; }
+
+/* ── Cards / rows ── */
+function trackCard(id, queueIds){
+  const t=state.tracks[id]; if(!t) return "";
+  const a=artistById(t.artistId)||{name:"?",color:"#666"}; const liked=isLiked(id);
+  return `<div class="card" onclick="playTrack('${id}',${JSON.stringify(queueIds).replace(/"/g,'&quot;')})">
+    <button class="like-btn ${liked?'liked':''}" onclick="event.stopPropagation();toggleLike('${id}')" title="Mi piace">${liked?'❤️':'🤍'}</button>
+    <div class="cover" style="background:linear-gradient(135deg,${t.color||a.color},#160f3a)"><div class="plt">♪</div>${t.isAI?'<div class="badge-ai">AI</div>':''}<div class="badge-aura" onclick="event.stopPropagation();voteAura('${id}')" title="Dai Aura">${hasVotedAura(id)?'✨':'Aura '+auraCount(id)}</div><div class="play">▶</div></div>
+    <div class="title">${esc(t.title)}</div><div class="artist">${esc(a.name)}</div>
+    <div class="meta"><span>${esc(t.genre)}</span><span class="dot"></span><span>${t.plays||0} ascolti</span></div></div>`;
+}
+function artistCard(aid){
+  const a=artistById(aid); if(!a) return ""; const followed=isFollowing(aid);
+  const tcount=allTrackIds().filter(id=>state.tracks[id].artistId===aid).length;
+  return `<div class="card artist-card" onclick="go('artist','${aid}')">
+    <div class="av" style="background:linear-gradient(135deg,${a.color},#a26bff)">${esc(a.name[0]||'?')}</div>
+    <div class="name">${esc(a.name)}</div><div class="followers">${tcount} brani · ${followed?'Seguito':'—'}</div></div>`;
+}
+function playlistCard(pid){
+  const pl=state.playlists[pid]; if(!pl) return ""; const ids=pl.trackIds;
+  return `<div class="playlist-card" onclick="openPlaylist('${pid}')">
+    <div class="cover" style="background:linear-gradient(135deg,#a26bff,#5ef0e8)">${pl.emoji||'🎶'}</div>
+    <div class="meta"><h3>${esc(pl.name)}</h3><p>${ids.length} brani</p></div>
+    <button class="del" onclick="event.stopPropagation();deletePlaylist('${pid}')" title="Elimina">🗑️</button></div>`;
+}
+function trackRow(id, i, queueIds){
+  const t=state.tracks[id]; if(!t) return ""; const a=artistById(t.artistId)||{name:"?",color:"#666"}; const liked=isLiked(id);
+  const durStr=t.type==='seed'?fmtTime(t.durSec):(t.durSec?fmtTime(t.durSec):'—');
+  return `<div class="track-row" data-track="${id}" onclick="playTrack('${id}',${JSON.stringify(queueIds).replace(/"/g,'&quot;')})">
+    <div class="idx">${i}</div>
+    <div class="tt"><b>${esc(t.title)}</b><span>${esc(a.name)} · ${t.isAI?esc(t.model||'AI'):'Senza AI'}</span></div>
+    <div class="plays">${t.plays||0}</div><div class="dur">${durStr}</div>
+    <div class="acts">
+      <button class="icon-btn" style="color:${liked?'var(--danger)':'var(--text-dim)'}" onclick="event.stopPropagation();toggleLike('${id}')" title="Mi piace">${liked?'❤️':'🤍'}</button>
+      <button class="icon-btn" onclick="event.stopPropagation();addToPlaylistPrompt('${id}')" title="Aggiungi a playlist">＋</button>
+      <button class="icon-btn" onclick="event.stopPropagation();go('track','${id}')" title="Dettagli">ℹ️</button>
+      <button class="icon-btn" onclick="event.stopPropagation();openShare('${id}')" title="Condividi">↗</button>
+      <button class="icon-btn danger" onclick="event.stopPropagation();openReport('${id}')" title="Segnala">⚠</button>
+      ${t.type==='upload'&&t.artistId===myProfileId()?`<button class="icon-btn danger" onclick="event.stopPropagation();deleteTrack('${id}')" title="Elimina">🗑️</button>`:''}
+    </div></div>`;
+}
+
+/* ── Azioni globali ── */
+window.playTrack=(id,q)=>loadAndPlay(id,q);
+window.playAll=(ids)=>{ if(ids&&ids.length) loadAndPlay(ids[0],ids); };
+window.setGenre=setGenre;
+window.go=go;
+window.openPlaylist=openPlaylist;
+window.createPlaylist=()=>{ const name=prompt("Nome della playlist:","Nuova playlist"); if(!name) return; const id=genId("p"); state.playlists[id]={id,name,trackIds:[],emoji:"🎶"}; saveState(); rerender(); toast("Playlist creata."); };
+window.deletePlaylist=(pid)=>{ if(confirm("Eliminare la playlist?")){ delete state.playlists[pid]; saveState(); rerender(); } };
+window.addToPlaylistPrompt=(tid)=>{
+  const pls=Object.keys(state.playlists);
+  if(!pls.length){ const name=prompt("Nessuna playlist. Crearne una nuova?","Nuova playlist"); if(!name) return; const id=genId("p"); state.playlists[id]={id,name,trackIds:[tid],emoji:"🎶"}; saveState(); toast("Aggiunto a nuova playlist."); return; }
+  const opts=pls.map((pid,i)=>`${i+1}. ${state.playlists[pid].name}`).join("\n")+"\n\n0. Crea nuova playlist";
+  const choice=prompt("Aggiungi a quale playlist?\n"+opts,"1"); if(choice===null) return;
+  const n=parseInt(choice,10);
+  if(n===0){ const name=prompt("Nome:","Nuova playlist"); if(!name) return; const id=genId("p"); state.playlists[id]={id,name,trackIds:[tid],emoji:"🎶"}; saveState(); toast("Aggiunto a nuova playlist."); return; }
+  const pid=pls[n-1]; if(!pid){ toast("Scelta non valida."); return; }
+  if(!state.playlists[pid].trackIds.includes(tid)) state.playlists[pid].trackIds.push(tid);
+  saveState(); toast("Aggiunto a "+state.playlists[pid].name);
+};
+window.deleteTrack=async (tid)=>{ if(!confirm("Eliminare il brano? L'audio caricato verrà rimosso dal browser.")) return; await delBlob(tid); delete state.tracks[tid]; state.likes=state.likes.filter(x=>x!==tid); Object.values(state.playlists).forEach(pl=>{ pl.trackIds=pl.trackIds.filter(x=>x!==tid); }); if(loadedTrackId===tid){ stopCurrent(); loadedTrackId=null; updatePlayerUI(); } audit("delete_track", tid); saveState(); rerender(); toast("Brano eliminato."); };
+window.editProfile=editProfile;
+window.copyProfileLink=copyProfileLink;
+window.toggleLike=toggleLike; window.toggleFollow=toggleFollow;
+window.voteAura=voteAura; window.voteMatch=voteMatch; window.createMatch=createMatch;
+window.toggleConsent=toggleConsent; window.exportData=exportData; window.eraseAccount=eraseAccount;
+window.openShare=(tid)=>{ const t=state.tracks[tid]; if(!t) return; openShareText(t.title, "https://aura.fm/t/"+tid); };
+function openShareText(title,url){ document.getElementById("share-track").textContent=title; document.getElementById("share-url").value=url; document.getElementById("share-modal").classList.add("open"); document.getElementById("share-modal").dataset.url=url; }
+window.openReport=(tid)=>{ document.getElementById("report-modal").dataset.track=tid||""; document.getElementById("report-modal").classList.add("open"); };
+
+/* ── UI player ── */
+function updatePlayerUI(){
+  const t=loadedTrackId?state.tracks[loadedTrackId]:null;
+  const a=t?artistById(t.artistId):null; const cover=document.getElementById("pl-cover");
+  if(t){ document.getElementById("pl-title").textContent=t.title; document.getElementById("pl-artist").textContent=a?a.name:"Artista"; document.getElementById("pl-model").textContent=t.isAI?("Modello: "+(t.model||"AI")):"Brano senza AI"; cover.style.background="linear-gradient(135deg,"+(t.color||(a&&a.color)||'#a26bff')+",#160f3a)"; cover.textContent="♪"; document.getElementById("pl-tot").textContent=fmtTime(currentBuffer?currentBuffer.duration:(t.durSec||0)); const lb=document.getElementById('pl-like'); lb.classList.toggle("active",isLiked(loadedTrackId)); lb.textContent=isLiked(loadedTrackId)?"❤️":"🤍"; }
+  else { document.getElementById("pl-title").textContent="Nessun brano in riproduzione"; document.getElementById("pl-artist").textContent="Seleziona un brano per iniziare"; document.getElementById("pl-model").textContent=""; cover.style.background="var(--surface-2)"; cover.textContent="🎵"; document.getElementById("pl-tot").textContent="0:00"; document.getElementById("pl-cur").textContent="0:00"; document.getElementById("pl-fill").style.width="0%"; }
+  document.getElementById("pl-play").textContent=isPlaying?"⏸️":"▶️";
+  document.querySelectorAll(".track-row[data-track]").forEach(r=>r.classList.toggle("playing", r.dataset.track===loadedTrackId&&isPlaying));
+}
+function updateProgressBar(elapsed,dur){ const frac=dur>0?Math.min(1,elapsed/dur):0; document.getElementById("pl-fill").style.width=(frac*100)+"%"; document.getElementById("pl-cur").textContent=fmtTime(elapsed); }
+function updateGenreNav(){ const gn=document.getElementById("genre-nav"); if(!gn) return; const genres=uniqueGenres(); gn.innerHTML=genres.map(g=>`<button class="nav-item" onclick="setGenre('${g}');go('browse')"><span class="ic">🎵</span> ${esc(g)}</button>`).join("")||'<div style="color:var(--text-mute);font-size:12px;padding:6px">—</div>'; }
+
+/* ── Bind dinamici (dopo render app) ── */
+function bindDynamic(){
+  document.querySelectorAll("[data-toggle]").forEach(t=>{ t.onclick=()=>t.classList.toggle("on"); });
+  const dz=document.getElementById("dropzone");
+  if(dz){ const fi=document.getElementById("file-input"); dz.onclick=()=>fi&&fi.click(); if(fi) fi.onchange=()=>{ if(fi.files[0]) document.getElementById("file-name").textContent=fi.files[0].name+" ("+(fi.files[0].size/1024/1024).toFixed(1)+" MB)"; }; ["dragover","dragenter"].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag');})); ["dragleave","drop"].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag');})); dz.addEventListener("drop",ev=>{ ev.preventDefault(); if(ev.dataTransfer.files[0]){ fi.files=ev.dataTransfer.files; document.getElementById("file-name").textContent=ev.dataTransfer.files[0].name; } }); }
+  const us=document.getElementById("upload-submit"); if(us) us.onclick=handleUpload;
+  const spb=document.getElementById("set-pw-bar"); if(spb){ const inp=document.getElementById("set-pw"); inp.addEventListener("input", ()=>{ const pw=inp.value; let s=0; if(pw.length>=8)s++; if(pw.length>=12)s++; if(/[A-Z]/.test(pw))s++; if(/[0-9]/.test(pw))s++; if(/[^A-Za-z0-9]/.test(pw))s++; const pct=[0,20,40,60,80,100][s]; const col=[["#ff5d8f"],["#ff5d8f"],["#ffd166"],["#ffd166"],["#7afcd6"],["#7afcd6"]][s]; spb.style.width=pct+"%"; spb.style.background=col; }); }
+}
+
+/* ── Wire static events ── */
+document.getElementById("pl-play").addEventListener("click", togglePlay);
+document.getElementById("pl-next").addEventListener("click", nextTrack);
+document.getElementById("pl-prev").addEventListener("click", prevTrack);
+document.getElementById("pl-like").addEventListener("click", ()=>{ if(loadedTrackId) toggleLike(loadedTrackId); });
+document.getElementById("pl-share").addEventListener("click", ()=>{ if(loadedTrackId) openShare(loadedTrackId); else toast("Nessun brano da condividere."); });
+document.getElementById("pl-bar").addEventListener("click", e=>{ const r=e.currentTarget.getBoundingClientRect(); seek((e.clientX-r.left)/r.width); });
+document.getElementById("pl-vol").addEventListener("click", e=>{ const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); document.getElementById("pl-vol-fill").style.width=(frac*100)+"%"; if(currentGain&&audioCtx) currentGain.gain.value=frac*0.9; });
+document.getElementById("pl-shuffle").addEventListener("click", ()=>{ const ids=allTrackIds(); for(let i=ids.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [ids[i],ids[j]]=[ids[j],ids[i]]; } if(ids.length) loadAndPlay(ids[0],ids); toast("Riproduzione casuale."); });
+document.getElementById("pl-queue").addEventListener("click", ()=>{ toast("Coda: "+queue.length+" brani (indice "+(queueIdx+1)+")"); });
+document.getElementById("share-close").addEventListener("click", ()=>document.getElementById("share-modal").classList.remove("open"));
+document.getElementById("share-modal").addEventListener("click", e=>{ if(e.target.id==="share-modal") document.getElementById("share-modal").classList.remove("open"); });
+document.querySelectorAll("[data-share]").forEach(b=>b.addEventListener("click", ()=>{ const kind=b.dataset.share; const url=document.getElementById("share-modal").dataset.url||""; if(kind==="copy") copyUrl(url); else if(kind==="embed"){ const code="<iframe src=\""+url+"/embed\" width=\"320\" height=\"140\"></iframe>"; navigator.clipboard.writeText(code).then(()=>toast("Codice embed copiato.")).catch(()=>toast(code)); } else if(kind==="tweet") window.open("https://x.com/intent/tweet?text="+encodeURIComponent("Ascolta su Aura: ")+(url),"_blank"); else if(kind==="wa") window.open("https://wa.me/?text="+encodeURIComponent("Ascolta su Aura: "+url),"_blank"); }));
+document.getElementById("copy-btn").addEventListener("click", ()=>copyUrl(document.getElementById("share-url").value));
+function copyUrl(url){ navigator.clipboard.writeText(url).then(()=>toast("Link copiato!")).catch(()=>{ document.getElementById("share-url").select(); try{ document.execCommand("copy"); toast("Link copiato."); }catch(e){ toast("Copia manuale: "+url); } }); }
+document.getElementById("report-close").addEventListener("click", ()=>document.getElementById("report-modal").classList.remove("open"));
+document.getElementById("report-modal").addEventListener("click", e=>{ if(e.target.id==="report-modal") document.getElementById("report-modal").classList.remove("open"); });
+document.getElementById("report-submit").addEventListener("click", ()=>{ const tid=document.getElementById("report-modal").dataset.track; const reason=document.getElementById("report-reason").value; const desc=document.getElementById("report-desc").value.trim(); if(!desc){ toast("Descrizione obbligatoria."); return; } const rep={id:genId("r"), trackId:tid||null, reason, desc, email:document.getElementById("report-email").value.trim()||null, t:Date.now(), status:"ricevuta"}; state.reports.push(rep); audit("report", tid||""); saveState(); document.getElementById("report-modal").classList.remove("open"); document.getElementById("report-desc").value=""; document.getElementById("report-email").value=""; toast("Segnalazione inviata. Risposta entro 7 giorni."); });
+
+/* ── Cookie banner ── */
+function maybeShowCookieBanner(){
+  if(!state.cookieChoice){ document.getElementById("cookie-banner").classList.add("show"); }
+}
+document.getElementById("cookie-accept").addEventListener("click", ()=>{ state.cookieChoice="all"; audit("cookie_all"); saveState(); document.getElementById("cookie-banner").classList.remove("show"); toast("Preferenze cookie salvate."); });
+document.getElementById("cookie-essential").addEventListener("click", ()=>{ state.cookieChoice="essential"; audit("cookie_essential"); saveState(); document.getElementById("cookie-banner").classList.remove("show"); toast("Solo cookie necessari."); });
+document.getElementById("cookie-manage").addEventListener("click", ()=>{ go("settings"); document.getElementById("cookie-banner").classList.remove("show"); });
+
+/* ── Avvio ── */
+render(route);
+maybeShowCookieBanner();
+</script>
+</body>
+</html>
+
+
+
