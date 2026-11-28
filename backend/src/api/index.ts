@@ -41,7 +41,10 @@ class LoggingExceptionFilter implements ExceptionFilter {
       req?.method === 'GET' &&
       !API_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '.'))
     ) {
-      res.type('text/html').send(SPA_HTML);
+      // Forza 200 + text/html espliciti (helmet/Express possono averli pre-settati a 404/json)
+      res.status(200);
+      res.set('Content-Type', 'text/html; charset=utf-8');
+      res.send(SPA_HTML);
       return;
     }
 
