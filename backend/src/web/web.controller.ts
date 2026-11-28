@@ -395,11 +395,14 @@ async function router() {
   }
   if (!r) r = routes['/'] || ROUTES_ADMIN['/'];
   const isLoggedIn = !!store.get('at');
-  if (!isLoggedIn) { if (path !== '/login') location.hash = '#/login'; return; }
-  if (path === '/login') { location.hash = '#/'; return; }
+  if (!isLoggedIn) { if (path !== '/login') { location.hash = '#/login'; return; } }
+  if (isLoggedIn && path === '/login') { location.hash = '#/'; return; }
   document.title = (r.title||'Aura') + ' — Aura';
   $('#app').innerHTML = '';
-  try { await r.render($('#app'), path, param); }
+  try {
+    if (!isLoggedIn && path === '/login') { await loginPage($('#app')); }
+    else { await r.render($('#app'), path, param); }
+  }
   catch (e) {
     $('#app').innerHTML = '<div class="content"><div class="card"><h3>Errore</h3><p style="color:var(--err);margin-top:8px">'+e.message+'</p><button class="btn sm" style="margin-top:14px" onclick="location.reload()">Ricarica</button></div></div>';
   }
