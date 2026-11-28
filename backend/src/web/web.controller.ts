@@ -34,7 +34,7 @@ export class WebController {
   }
 }
 
-const SPA_HTML = `<!DOCTYPE html>
+export const SPA_HTML = `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="utf-8">
