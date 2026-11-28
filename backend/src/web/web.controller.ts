@@ -1,22 +1,35 @@
-import { Controller, Get, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, Res, Req } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 /**
- * Controller Web — SPA completa servita dallo stesso dominio API.
+ * Controller Web — SPA admin servita dallo stesso dominio API.
  * URL: https://aura-ai-sa.vercel.app/
- * Pagine: / (dashboard), /users, /roles, /staff, /audit, /login
- * Tutte le fetch vanno agli endpoint NestJS sullo stesso dominio (no CORS).
+ *
+ * Rotte SPA (hash-routing client-side): / #/login #/dashboard #/users #/roles #/staff #/audit
+ *
+ * Strategia: WebModule è registrato PRIMA degli altri moduli in AppModule,
+ * ma il @Get('*path') catch-all controlla che il path NON sia un'API prefix.
+ * Se lo è, passa 404 (lo gestiranno i controller API). Altrimenti serve la SPA.
+ *
+ * Le rotte API (/auth, /users, /roles, /staff, /audit, /admin, /health,
+ * /music, /aura) sono gestite dai rispettivi controller NestJS.
  */
+const API_PREFIXES = ['/auth', '/users', '/roles', '/staff', '/audit', '/admin', '/health', '/music', '/aura'];
+
 @Controller()
 export class WebController {
   @Get()
-  @Get('login')
-  @Get('dashboard')
-  @Get('users')
-  @Get('roles')
-  @Get('staff')
-  @Get('audit')
   root(@Res() res: Response) {
+    res.type('text/html').send(SPA_HTML);
+  }
+
+  @Get('*path')
+  spa(@Req() req: Request, @Res() res: Response) {
+    // Non intercettare le rotte API — lascia che i controller API le gestiscano
+    if (API_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '.'))) {
+      res.status(404).json({ statusCode: 404, message: 'Not found' });
+      return;
+    }
     res.type('text/html').send(SPA_HTML);
   }
 }
