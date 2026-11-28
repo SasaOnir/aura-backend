@@ -33,6 +33,18 @@ class LoggingExceptionFilter implements ExceptionFilter {
     const msg = exception?.message || String(exception);
     this.logger.error(`${req?.method} ${req?.url} → ${status}: ${msg}`);
     if (res.headersSent) return;
+
+    // SPA fallback: GET 404 su path NON-API → serve la SPA admin (hash-routing client-side).
+    // I path API restano errori JSON strutturati. Questo risolve /login /dashboard etc.
+    if (
+      status === 404 &&
+      req?.method === 'GET' &&
+      !API_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + '/') || req.path.startsWith(p + '.'))
+    ) {
+      res.type('text/html').send(SPA_HTML);
+      return;
+    }
+
     const response: any = exception instanceof HttpException ? exception.getResponse() : null;
     res.status(status).json(
       typeof response === 'object' && response && !Array.isArray(response)
@@ -93,19 +105,6 @@ async function bootstrap() {
   );
 
   await app.init();
-
-  // SPA fallback (Express-level, dopo app.init() così non shadowa i controller NestJS):
-  // per ogni path NON-API, serve la SPA admin (hash-routing client-side /#/login /#/dashboard...).
-  // I controller NestJS hanno rotte più specifiche e vincono; questo catch-all
-  // intercetta solo ciò che nessun controller ha gestito.
-  expressApp.use((req, res) => {
-    const p = req.path;
-    if (API_PREFIXES.some((prefix) => p === prefix || p.startsWith(prefix + '/') || p.startsWith(prefix + '.'))) {
-      res.status(404).json({ statusCode: 404, message: 'Not found' });
-      return;
-    }
-    res.type('text/html').send(SPA_HTML);
-  });
 
   // Bootstrap Super Admin (idempotente, una tantum al primo cold start)
   try {
