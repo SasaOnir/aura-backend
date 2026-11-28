@@ -433,7 +433,7 @@ function shell(path, contentHTML, modeOverride) {
     { id:'listener',label:'Listener' },
     { id:'artist',  label:'Artist' },
   ];
-  const modeSwitch = modes.map(m => '<button class="mode-btn'+(m.id===mode?' active':'')+'" onclick="setMode(&#39;'+m.id+'&#39;)">'+m.label+'</button>').join('');
+  const modeSwitch = modes.map(m => '<button class="mode-btn'+(m.id===mode?' active':'')+'" onclick="setMode(\\''+m.id+'\\')">'+m.label+'</button>').join('');
   return '<div class="app">' +
     '<aside class="sidebar" id="sidebar">' +
       '<div class="brand"><div class="logo">A</div><div class="name"><span class="grad">Aura</span></div></div>' +
@@ -443,7 +443,7 @@ function shell(path, contentHTML, modeOverride) {
         navItems.map(n => {
           // gestisci route attiva con parametri (es. /player/:id)
           const isActive = n.p === path || (n.p.startsWith('/artist') && path.startsWith('/artist')) || (n.p === '/' && (path === '/' || path.startsWith('/player')));
-          return '<button class="nav-item'+(isActive?' active':'')+'" onclick="navigate(&#39;'+n.p+'&#39;)">'+IC[n.ico]+'<span>'+n.label+'</span></button>';
+          return '<button class="nav-item'+(isActive?' active':'')+'" onclick="navigate(\\''+n.p+'\\')">'+IC[n.ico]+'<span>'+n.label+'</span></button>';
         }).join('') +
       '</nav>' +
       '<div class="sidebar-foot">' +
@@ -454,7 +454,7 @@ function shell(path, contentHTML, modeOverride) {
     '</aside>' +
     '<main class="main">' +
       '<div class="topbar">' +
-        '<button class="menu-btn" onclick="document.getElementById(&#39;sidebar&#39;).classList.toggle(&#39;open&#39;)">'+IC.menu+'</button>' +
+        '<button class="menu-btn" onclick="document.getElementById(\\'sidebar\\').classList.toggle(\\'open\\')">'+IC.menu+'</button>' +
         '<h1>'+(currentRoutes()[path]?.title || 'Aura')+'</h1>' +
         '<div class="meta"><span class="dot"></span> API online · <span class="mono">aura-ai-sa.vercel.app</span></div>' +
       '</div>' +
@@ -560,9 +560,9 @@ async function usersPage(el, path) {
         '<td class="mono" style="font-size:11px;color:var(--muted)">'+fmt.rel(u.lastLoginAt)+'</td>' +
         '<td class="id">'+(u.id||'').slice(0,8)+'</td>' +
         '<td><div class="actions">' +
-          '<button class="btn-ico" title="Dettagli" onclick="userDetail(&#39;'+u.id+'&#39;)">'+IC.search+'</button>' +
-          (u.status==='active' ? '<button class="btn-ico danger" title="Sospendi" onclick="userSuspend(&#39;'+u.id+'&#39;)">'+IC.trash+'</button>' :
-           '<button class="btn-ico" title="Riattiva" onclick="userReactivate(&#39;'+u.id+'&#39;)">'+IC.check+'</button>') +
+          '<button class="btn-ico" title="Dettagli" onclick="userDetail(\\''+u.id+'\\')">'+IC.search+'</button>' +
+          (u.status==='active' ? '<button class="btn-ico danger" title="Sospendi" onclick="userSuspend(\\''+u.id+'\\')">'+IC.trash+'</button>' :
+           '<button class="btn-ico" title="Riattiva" onclick="userReactivate(\\''+u.id+'\\')">'+IC.check+'</button>') +
         '</div></td>' +
       '</tr>';
     }).join('');
@@ -614,8 +614,8 @@ async function rolesPage(el, path) {
         '<td><span class="badge accent">'+(r._count?.permissions||0)+' permessi</span></td>' +
         '<td><span class="badge info">'+(r._count?.userRoles||0)+' utenti</span></td>' +
         '<td><div class="actions">' +
-          '<button class="btn-ico" title="Dettagli" onclick="roleDetail(&#39;'+r.id+'&#39;)">'+IC.search+'</button>' +
-          (!r.isProtected ? '<button class="btn-ico danger" title="Elimina" onclick="roleDelete(&#39;'+r.id+'&#39;,&#39;'+r.name+'&#39;)">'+IC.trash+'</button>' : '') +
+          '<button class="btn-ico" title="Dettagli" onclick="roleDetail(\\''+r.id+'\\')">'+IC.search+'</button>' +
+          (!r.isProtected ? '<button class="btn-ico danger" title="Elimina" onclick="roleDelete(\\''+r.id+'\\',\\''+r.name+'\\')">'+IC.trash+'</button>' : '') +
         '</div></td>' +
       '</tr>';
     }).join('');
@@ -671,9 +671,9 @@ async function staffPage(el, path) {
         '<td class="mono" style="font-size:11px;color:var(--muted)">'+fmt.rel(u.lastLoginAt)+'</td>' +
         '<td class="id">'+(s.userId||'').slice(0,8)+'</td>' +
         '<td><div class="actions">' +
-          '<button class="btn-ico" title="Assegna ruolo" onclick="staffAssign(&#39;'+s.userId+'&#39;,&#39;'+(u.displayName||'')+'&#39;)">'+IC.key+'</button>' +
-          '<button class="btn-ico" title="MFA on/off" onclick="staffToggleMfa(&#39;'+s.userId+'&#39;,'+!s.mfaRequired+')">'+IC.shield+'</button>' +
-          '<button class="btn-ico danger" title="Revoca staff" onclick="staffRevoke(&#39;'+s.userId+'&#39;,&#39;'+(u.displayName||'')+'&#39;)">'+IC.trash+'</button>' +
+          '<button class="btn-ico" title="Assegna ruolo" onclick="staffAssign(\\''+s.userId+'\\',\\''+(u.displayName||'')+'\\')">'+IC.key+'</button>' +
+          '<button class="btn-ico" title="MFA on/off" onclick="staffToggleMfa(\\''+s.userId+'\\','+!s.mfaRequired+')">'+IC.shield+'</button>' +
+          '<button class="btn-ico danger" title="Revoca staff" onclick="staffRevoke(\\''+s.userId+'\\',\\''+(u.displayName||'')+'\\')">'+IC.trash+'</button>' +
         '</div></td>' +
       '</tr>';
     }).join('');
@@ -707,7 +707,7 @@ window.staffAssign = (userId, name) => {
   openModal('Assegna ruolo a '+(name||''),
     '<div class="form-row"><label>Ruolo</label><select id="a_role">'+roleOpts+'</select></div>' +
     '<div class="form-row"><label>Motivo (opzionale)</label><input id="a_reason" placeholder="Motivo assegnazione"></div>',
-    '<button class="btn" onclick="closeModal()">Annulla</button><button class="btn primary" onclick="staffAssignSubmit(&#39;'+userId+'&#39;)">Assegna</button>');
+    '<button class="btn" onclick="closeModal()">Annulla</button><button class="btn primary" onclick="staffAssignSubmit(\\''+userId+'\\')">Assegna</button>');
 };
 window.staffAssignSubmit = async (userId) => {
   const body = { roleName: $('#a_role').value, reason: $('#a_reason').value.trim() };
